@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Users, 
   UserCheck, 
@@ -37,6 +38,9 @@ interface RecentCheckin {
 }
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+
   // Stats
   const [stats, setStats] = useState<DashboardStats>({
     totalGuests: 0,
@@ -113,11 +117,21 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
+    const auth = localStorage.getItem('staff_authenticated');
+    const role = localStorage.getItem('staff_role');
+    
+    if (auth !== 'true' || role !== 'Admin') {
+      router.push('/staff/login');
+      return;
+    }
+    
+    setAuthorized(true);
     fetchMetrics();
+    
     // Auto-refresh stats every 30 seconds
     const interval = setInterval(fetchMetrics, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
 
   // Form Submit Handler
   const handleGenerateTicket = async (e: React.FormEvent) => {
@@ -196,6 +210,14 @@ export default function AdminPage() {
   const percentCheckedIn = stats.totalGuests > 0 
     ? Math.round((stats.checkedIn / stats.totalGuests) * 100) 
     : 0;
+
+  if (!authorized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#060608] text-zinc-500 text-xs tracking-[0.3em] uppercase">
+        Verifying Admin Credentials...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#060608] text-white">

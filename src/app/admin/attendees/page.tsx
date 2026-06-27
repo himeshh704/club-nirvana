@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Compass, 
   Search, 
@@ -30,6 +31,8 @@ interface Attendee {
 }
 
 export default function AttendeeDirectory() {
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -54,8 +57,17 @@ export default function AttendeeDirectory() {
   };
 
   useEffect(() => {
+    const auth = localStorage.getItem('staff_authenticated');
+    const role = localStorage.getItem('staff_role');
+    
+    if (auth !== 'true' || role !== 'Admin') {
+      router.push('/staff/login');
+      return;
+    }
+    
+    setAuthorized(true);
     fetchAttendees();
-  }, []);
+  }, [router]);
 
   // Filter and Search logic
   const filteredAttendees = attendees.filter((item) => {
@@ -182,6 +194,14 @@ export default function AttendeeDirectory() {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (!authorized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#060608] text-zinc-500 text-xs tracking-[0.3em] uppercase">
+        Verifying Admin Credentials...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#060608] text-white">
