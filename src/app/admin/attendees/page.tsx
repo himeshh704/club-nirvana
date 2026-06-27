@@ -287,7 +287,7 @@ export default function AttendeeDirectory() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-zinc-900 text-zinc-500 text-xs font-semibold uppercase bg-black/20">
+                <tr className="border-b border-zinc-900 text-zinc-500 text-xs font-semibold uppercase bg-black/20 whitespace-nowrap">
                   <th className="py-4 px-6">Attendee Info</th>
                   <th className="py-4 px-4">Ticket Type</th>
                   <th className="py-4 px-4">Pass Sharing Link</th>
@@ -305,7 +305,7 @@ export default function AttendeeDirectory() {
                   </tr>
                 ) : filteredAttendees.length > 0 ? (
                   filteredAttendees.map((attendee) => (
-                    <tr key={attendee.id} className={`hover:bg-zinc-950/40 ${attendee.is_banned ? 'bg-red-950/5' : ''}`}>
+                    <tr key={attendee.id} className={`hover:bg-zinc-950/40 ${attendee.is_banned ? 'bg-red-950/5' : ''} whitespace-nowrap`}>
                       {/* Name & contact */}
                       <td className="py-4 px-6">
                         <div className="font-semibold text-white text-base">{attendee.name}</div>
@@ -326,13 +326,13 @@ export default function AttendeeDirectory() {
                           {attendee.ticket_type}
                         </span>
                       </td>
-
+ 
                       {/* URL Sharing */}
                       <td className="py-4 px-4">
                         <div className="flex flex-col gap-2 items-start justify-start">
                           <button
                             onClick={() => handleCopyLink(attendee.qr_token, attendee.id)}
-                            className="flex items-center gap-1 text-xs text-[#cca43b] hover:text-[#ffe082] cursor-pointer"
+                            className="flex items-center gap-1.5 text-xs text-[#cca43b] hover:text-[#ffe082] cursor-pointer"
                           >
                             {copiedId === attendee.id ? (
                               <>
@@ -346,17 +346,17 @@ export default function AttendeeDirectory() {
                               </>
                             )}
                           </button>
-
+ 
                           <button
                             onClick={() => handleSendWhatsApp(attendee.name, attendee.phone, attendee.qr_token, attendee.ticket_type)}
-                            className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                            className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
                           >
                             <MessageSquare className="h-3.5 w-3.5" />
                             <span>Send WhatsApp</span>
                           </button>
                         </div>
                       </td>
-
+ 
                       {/* Entry Status */}
                       <td className="py-4 px-4">
                         {attendee.is_banned ? (
@@ -378,16 +378,16 @@ export default function AttendeeDirectory() {
                           </span>
                         )}
                       </td>
-
+ 
                       {/* Admin Controls */}
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-4 px-6 text-right min-w-[150px]">
                         <div className="flex gap-2 justify-end">
                           
                           {/* Force check-in button toggle */}
                           <button
                             onClick={() => handleToggleCheckin(attendee.id, attendee.is_used)}
                             disabled={attendee.is_banned}
-                            className={`rounded-lg p-2 border transition-all ${
+                            className={`rounded-lg p-2 border transition-all cursor-pointer ${
                               attendee.is_used 
                                 ? 'bg-zinc-950 border-zinc-900 text-zinc-500 hover:text-white' 
                                 : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
@@ -396,11 +396,11 @@ export default function AttendeeDirectory() {
                           >
                             <UserCheck className="h-4 w-4" />
                           </button>
-
+ 
                           {/* Blacklist toggle */}
                           <button
                             onClick={() => handleToggleBlacklist(attendee.id, attendee.is_banned)}
-                            className={`rounded-lg p-2 border transition-all ${
+                            className={`rounded-lg p-2 border transition-all cursor-pointer ${
                               attendee.is_banned 
                                 ? 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25' 
                                 : 'bg-zinc-950 border-zinc-900 text-zinc-500 hover:text-red-400'
@@ -409,11 +409,11 @@ export default function AttendeeDirectory() {
                           >
                             <UserX className="h-4 w-4" />
                           </button>
-
+ 
                           {/* Revoke/Delete */}
                           <button
                             onClick={() => handleDeleteTicket(attendee.id)}
-                            className="rounded-lg bg-zinc-950 border border-zinc-900 p-2 text-zinc-500 hover:text-red-500 hover:border-red-950 transition-all"
+                            className="rounded-lg bg-zinc-950 border border-zinc-900 p-2 text-zinc-500 hover:text-red-500 hover:border-red-950 transition-all cursor-pointer"
                             title="Revoke and delete pass"
                           >
                             <Trash2 className="h-4 w-4" />
