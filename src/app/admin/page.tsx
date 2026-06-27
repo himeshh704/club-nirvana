@@ -210,8 +210,14 @@ export default function AdminPage() {
   const handleShareQR = async () => {
     if (!generatedTicket) return;
     try {
-      const response = await fetch(generatedTicket.qrDataUrl);
-      const blob = await response.blob();
+      // Direct base64 to Blob conversion (fixes Safari/Chrome mobile fetch failures)
+      const byteString = atob(generatedTicket.qrDataUrl.split(',')[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: 'image/png' });
       const filename = `ticket-${generatedTicket.guestName.toLowerCase().replace(/\s+/g, '-')}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
       

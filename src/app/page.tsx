@@ -100,8 +100,14 @@ function GuestPageContent() {
   const handleDownload = async () => {
     if (!qrUrl || !ticketData) return;
     try {
-      const response = await fetch(qrUrl);
-      const blob = await response.blob();
+      // Direct base64 to Blob conversion (fixes Safari/Chrome mobile fetch failures)
+      const byteString = atob(qrUrl.split(',')[1]);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: 'image/png' });
       const filename = `vanguard-pass-${ticketData.name.toLowerCase().replace(/\s+/g, '-')}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
       
