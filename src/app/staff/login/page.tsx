@@ -16,8 +16,13 @@ export default function StaffLoginPage() {
   useEffect(() => {
     // Check if already logged in
     const auth = localStorage.getItem('staff_authenticated');
+    const role = localStorage.getItem('staff_role');
     if (auth === 'true') {
-      router.push('/staff/dashboard');
+      if (role === 'Admin') {
+        router.push('/admin');
+      } else {
+        router.push('/staff/dashboard');
+      }
     }
 
     // Default device name based on browser/screen
@@ -42,13 +47,18 @@ export default function StaffLoginPage() {
     // admin8824 -> role: Admin
     // gate123 -> role: Security
     if (accessCode === 'admin8824' || accessCode === 'gate123') {
+      const isAdmin = accessCode === 'admin8824';
       // Store auth state locally for offline PWA operation
       localStorage.setItem('staff_authenticated', 'true');
-      localStorage.setItem('staff_role', accessCode === 'admin8824' ? 'Admin' : 'Security');
+      localStorage.setItem('staff_role', isAdmin ? 'Admin' : 'Security');
       localStorage.setItem('staff_gate', gate);
       localStorage.setItem('staff_device', deviceName || 'Generic Gate Scanner');
 
-      router.push('/staff/dashboard');
+      if (isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/staff/dashboard');
+      }
     } else {
       setError('Invalid Access Code. Please check with the coordinator.');
     }
