@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.staff (
 -- Insert a default admin and staff for immediate testing
 INSERT INTO public.staff (name, email, role, access_code)
 VALUES 
-('Admin User', 'admin@event.com', 'Admin', 'admin123'),
+('Admin User', 'admin@event.com', 'Admin', 'admin8824'),
 ('Gate Scanner A', 'gatea@event.com', 'Security', 'gate123')
 ON CONFLICT (email) DO NOTHING;
 

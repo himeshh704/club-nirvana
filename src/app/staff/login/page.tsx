@@ -39,12 +39,12 @@ export default function StaffLoginPage() {
     }
 
     // Standard logins:
-    // admin123 -> role: Admin
+    // admin8824 -> role: Admin
     // gate123 -> role: Security
-    if (accessCode === 'admin123' || accessCode === 'gate123') {
+    if (accessCode === 'admin8824' || accessCode === 'gate123') {
       // Store auth state locally for offline PWA operation
       localStorage.setItem('staff_authenticated', 'true');
-      localStorage.setItem('staff_role', accessCode === 'admin123' ? 'Admin' : 'Security');
+      localStorage.setItem('staff_role', accessCode === 'admin8824' ? 'Admin' : 'Security');
       localStorage.setItem('staff_gate', gate);
       localStorage.setItem('staff_device', deviceName || 'Generic Gate Scanner');
 
