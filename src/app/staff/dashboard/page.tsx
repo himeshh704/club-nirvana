@@ -169,7 +169,9 @@ export default function StaffDashboard() {
       // Stop scanner
       if (html5QrCodeRef.current) {
         try {
-          await html5QrCodeRef.current.stop();
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
           setScannerActive(false);
         } catch (err) {
           console.error('Error stopping scanner:', err);
@@ -177,13 +179,14 @@ export default function StaffDashboard() {
       }
     } else {
       setScannerActive(true);
-      // Wait for DOM render
+      // Let React complete state update for UI, then initialize
       setTimeout(async () => {
         try {
-          const html5QrCode = new Html5Qrcode("reader");
-          html5QrCodeRef.current = html5QrCode;
+          if (!html5QrCodeRef.current) {
+            html5QrCodeRef.current = new Html5Qrcode("reader");
+          }
           
-          await html5QrCode.start(
+          await html5QrCodeRef.current.start(
             { facingMode: "environment" },
             { 
               fps: 15, 
@@ -202,10 +205,10 @@ export default function StaffDashboard() {
           );
         } catch (err) {
           console.error('Failed to start camera scanner:', err);
-          alert('Could not access camera. Please check browser permissions.');
+          alert('Could not access camera. Please make sure to open this in Safari (iOS) or Chrome (Android) and grant camera access.');
           setScannerActive(false);
         }
-      }, 200);
+      }, 100);
     }
   };
 
@@ -464,16 +467,17 @@ export default function StaffDashboard() {
         
         {/* Scanner Area */}
         <div className="flex-1 flex flex-col items-center justify-center py-4">
-          {scannerActive ? (
-            <div className="relative w-full max-w-xs aspect-square overflow-hidden rounded-3xl border-2 border-[#cca43b] bg-black">
-              <div id="reader" className="w-full h-full"></div>
-              {/* Decorative scan target box */}
-              <div className="absolute inset-10 border-2 border-dashed border-white/20 pointer-events-none rounded-xl"></div>
-            </div>
-          ) : (
+          {/* We keep the reader element always mounted in the DOM to prevent race conditions during instantiation */}
+          <div className={`relative w-full max-w-xs aspect-square overflow-hidden rounded-3xl border-2 border-[#cca43b] bg-black ${scannerActive ? 'block' : 'hidden'}`}>
+            <div id="reader" className="w-full h-full"></div>
+            {/* Decorative scan target box */}
+            <div className="absolute inset-10 border-2 border-dashed border-white/20 pointer-events-none rounded-xl"></div>
+          </div>
+
+          {!scannerActive && (
             <button
               onClick={toggleScanner}
-              className="group flex flex-col items-center justify-center gap-4 rounded-full border border-dashed border-zinc-800 bg-zinc-950/40 w-56 h-56 transition-all hover:border-[#cca43b] hover:bg-zinc-900/40 hover:shadow-[0_0_30px_rgba(204,164,59,0.08)]"
+              className="group flex flex-col items-center justify-center gap-4 rounded-full border border-dashed border-zinc-800 bg-zinc-950/40 w-56 h-56 transition-all hover:border-[#cca43b] hover:bg-zinc-900/40 hover:shadow-[0_0_30px_rgba(204,164,59,0.08)] cursor-pointer"
             >
               <div className="rounded-full bg-zinc-900 group-hover:bg-[#cca43b]/10 p-5 transition-colors">
                 <QrCode className="h-10 w-10 text-zinc-400 group-hover:text-[#cca43b]" />
@@ -485,7 +489,7 @@ export default function StaffDashboard() {
           {scannerActive && (
             <button
               onClick={toggleScanner}
-              className="mt-6 rounded-xl bg-zinc-900 border border-zinc-850 px-5 py-2.5 text-xs font-semibold text-zinc-400"
+              className="mt-6 rounded-xl bg-zinc-900 border border-zinc-850 px-5 py-2.5 text-xs font-semibold text-zinc-400 cursor-pointer"
             >
               CANCEL CAMERA SCAN
             </button>
