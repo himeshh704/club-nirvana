@@ -168,8 +168,8 @@ export default function AdminPage() {
         // Construct guest link
         const passLink = `${window.location.origin}/?ticket=${data.qrToken}`;
         
-        // Generate client QR code display
-        const qrUrl = await QRCode.toDataURL(data.qrToken, { margin: 2 });
+        // Generate client QR code display (Level L error correction minimizes density/dot count for instant scanning)
+        const qrUrl = await QRCode.toDataURL(data.qrToken, { margin: 2, errorCorrectionLevel: 'L' });
 
         setGeneratedTicket({
           ticketId: data.ticketId,

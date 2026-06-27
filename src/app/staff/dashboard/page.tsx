@@ -189,11 +189,7 @@ export default function StaffDashboard() {
           await html5QrCodeRef.current.start(
             { facingMode: "environment" },
             { 
-              fps: 15, 
-              qrbox: (width, height) => {
-                const size = Math.min(width, height) * 0.7;
-                return { width: size, height: size };
-              }
+              fps: 20
             },
             (decodedText) => {
               // Successfully decoded a QR token

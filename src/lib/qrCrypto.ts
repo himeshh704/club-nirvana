@@ -3,11 +3,9 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.QR_JWT_SECRET || 'fallback-secret-key-do-not-use-in-production';
 
 export interface QRTicketPayload {
-  ticketId: string;
-  userId: string;
-  ticketType: string;
-  name: string;
-  createdAt: string;
+  i: string; // ticketId
+  n: string; // name
+  t: string; // ticketType
 }
 
 /**

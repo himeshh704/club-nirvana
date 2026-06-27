@@ -60,17 +60,21 @@ function GuestPageContent() {
         const parts = ticketToken.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1]));
+          const ticketId = payload.i || payload.ticketId;
+          const name = payload.n || payload.name || 'Valued Guest';
+          const ticketType = payload.t || payload.ticketType || 'Regular';
+          
           setTicketData({
-            ticketId: payload.ticketId,
-            userId: payload.userId,
-            ticketType: payload.ticketType || 'Regular',
-            name: payload.name || 'Valued Guest',
-            createdAt: payload.createdAt
+            ticketId,
+            userId: payload.userId || '',
+            ticketType,
+            name,
+            createdAt: payload.createdAt || ''
           });
 
-          // Generate QR code URL
+          // Generate QR code URL (Level L error correction minimizes density/dot count for instant scanning)
           QRCode.toDataURL(ticketToken, {
-            errorCorrectionLevel: 'H',
+            errorCorrectionLevel: 'L',
             margin: 2,
             color: {
               dark: '#000000',

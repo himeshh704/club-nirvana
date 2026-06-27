@@ -72,13 +72,11 @@ export async function POST(request: Request) {
 
     const ticketId = tempTicket.id;
 
-    // 3. Cryptographically sign the QR token
+    // 3. Cryptographically sign the QR token (compressed payload for low QR density)
     const qrToken = signQRToken({
-      ticketId,
-      userId,
-      ticketType: ticket_type,
-      name,
-      createdAt: tempTicket.created_at
+      i: ticketId,
+      n: name,
+      t: ticket_type
     });
 
     // 4. Update the ticket with the signed QR token

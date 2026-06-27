@@ -23,12 +23,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'invalid', message: 'Cryptographic signature mismatch. Possible fake ticket.' });
     }
 
-    const { ticketId, name, ticketType } = payload;
+    const { i: ticketId } = payload;
 
-    // 2. Fetch the latest live ticket status from Supabase database
+    // 2. Fetch the latest live ticket status from Supabase database (joining user name)
     const { data: ticket, error: ticketError } = await supabaseAdmin
       .from('tickets')
-      .select('id, is_used, used_at, is_banned')
+      .select('id, is_used, used_at, is_banned, ticket_type, users(name)')
       .eq('id', ticketId)
       .maybeSingle();
 
@@ -40,6 +40,9 @@ export async function POST(request: Request) {
     if (!ticket) {
       return NextResponse.json({ status: 'invalid', message: 'Ticket does not exist in the database.' });
     }
+
+    const name = (ticket as any)?.users?.name || 'Guest';
+    const ticketType = ticket.ticket_type;
 
     // 3. Check if blacklisted / banned
     if (ticket.is_banned) {
