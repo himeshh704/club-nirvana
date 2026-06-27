@@ -105,7 +105,7 @@ function GuestPageContent() {
   const EVENT = {
     title: "VANGUARD // NOTHING",
     subtitle: "AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE",
-    date: "Saturday, July 11, 2026",
+    date: "To Be Disclosed",
     time: "9:00 PM - 4:00 AM",
     venue: "Club Nirvana",
     address: "Jodhpur",
