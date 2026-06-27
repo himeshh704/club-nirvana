@@ -40,6 +40,7 @@ interface ScanDetails {
 
 export default function StaffDashboard() {
   const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
   
   // Gate terminal metadata
   const [gate, setGate] = useState('Gate A');
@@ -69,6 +70,8 @@ export default function StaffDashboard() {
       router.push('/staff/login');
       return;
     }
+
+    setAuthorized(true);
 
     setGate(localStorage.getItem('staff_gate') || 'Gate A');
     setDevice(localStorage.getItem('staff_device') || 'Gate Scanner');
@@ -419,6 +422,14 @@ export default function StaffDashboard() {
     localStorage.removeItem('staff_device');
     router.push('/staff/login');
   };
+
+  if (!authorized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#060608] text-zinc-500 text-xs tracking-[0.3em] uppercase">
+        Verifying Terminal Credentials...
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-[#060608] text-white">
