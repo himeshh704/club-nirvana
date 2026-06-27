@@ -16,7 +16,8 @@ import {
   QrCode, 
   RefreshCcw,
   ShieldCheck,
-  Search
+  Search,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
@@ -67,6 +68,7 @@ export default function AdminPage() {
     ticketType: string;
     qrToken: string;
     guestName: string;
+    guestPhone: string;
     linkUrl: string;
     qrDataUrl: string;
   } | null>(null);
@@ -176,6 +178,7 @@ export default function AdminPage() {
           ticketType: data.ticketType,
           qrToken: data.qrToken,
           guestName: data.guestName,
+          guestPhone: phone,
           linkUrl: passLink,
           qrDataUrl: qrUrl
         });
@@ -242,6 +245,20 @@ export default function AdminPage() {
         win.document.write(`<img src="${generatedTicket.qrDataUrl}" style="max-width: 100%; height: auto; margin: auto; display: block;" />`);
       }
     }
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!generatedTicket) return;
+    
+    // Format phone number (remove spaces, symbols; ensure country code)
+    let cleanNumber = generatedTicket.guestPhone.replace(/\D/g, '');
+    if (cleanNumber.length === 10) {
+      cleanNumber = '91' + cleanNumber; // Default to India prefix if 10 digits
+    }
+    
+    const message = `Hey *${generatedTicket.guestName}*! 🎟️\n\nHere is your entrance ticket pass for *VANGUARD // NOTHING* at Club Nirvana, Jodhpur.\n\nType: *${generatedTicket.ticketType}*\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
   };
 
   const percentCheckedIn = stats.totalGuests > 0 
@@ -482,6 +499,14 @@ export default function AdminPage() {
 
                   {/* Actions */}
                   <div className="mt-5 space-y-3">
+                    <button
+                      onClick={handleSendWhatsApp}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-xs font-bold text-white transition-all active:scale-95 text-center cursor-pointer shadow-lg shadow-emerald-950/20"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      SEND ON WHATSAPP
+                    </button>
+
                     <button
                       onClick={handleCopyLink}
                       className="w-full flex items-center justify-center gap-2 rounded-xl bg-zinc-950 border border-zinc-900 py-3 text-xs font-bold text-zinc-300 hover:bg-zinc-900 active:scale-95"

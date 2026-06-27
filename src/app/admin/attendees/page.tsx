@@ -14,7 +14,8 @@ import {
   Check,
   RefreshCcw,
   AlertOctagon,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -162,6 +163,17 @@ export default function AttendeeDirectory() {
     navigator.clipboard.writeText(passLink);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleSendWhatsApp = (name: string, phone: string, qrToken: string, ticketType: string) => {
+    let cleanNumber = phone.replace(/\D/g, '');
+    if (cleanNumber.length === 10) {
+      cleanNumber = '91' + cleanNumber; // Default to India country code
+    }
+    const passLink = `${window.location.origin}/?ticket=${qrToken}`;
+    const message = `Hey *${name}*! 🎟️\n\nHere is your entrance ticket pass for *VANGUARD // NOTHING* at Club Nirvana, Jodhpur.\n\nType: *${ticketType}*\nPass Link: ${passLink}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
+    const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
   };
 
   // Action: Export directory to CSV
@@ -317,22 +329,32 @@ export default function AttendeeDirectory() {
 
                       {/* URL Sharing */}
                       <td className="py-4 px-4">
-                        <button
-                          onClick={() => handleCopyLink(attendee.qr_token, attendee.id)}
-                          className="flex items-center gap-1 text-xs text-[#cca43b] hover:text-[#ffe082]"
-                        >
-                          {copiedId === attendee.id ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
-                              <span className="text-emerald-400 font-semibold">Link Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3.5 w-3.5" />
-                              <span>Copy QR Link</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="flex flex-col gap-2 items-start justify-start">
+                          <button
+                            onClick={() => handleCopyLink(attendee.qr_token, attendee.id)}
+                            className="flex items-center gap-1 text-xs text-[#cca43b] hover:text-[#ffe082] cursor-pointer"
+                          >
+                            {copiedId === attendee.id ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                <span className="text-emerald-400 font-semibold">Link Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5" />
+                                <span>Copy QR Link</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => handleSendWhatsApp(attendee.name, attendee.phone, attendee.qr_token, attendee.ticket_type)}
+                            className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span>Send WhatsApp</span>
+                          </button>
+                        </div>
                       </td>
 
                       {/* Entry Status */}
