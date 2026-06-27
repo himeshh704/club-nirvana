@@ -96,9 +96,33 @@ function GuestPageContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Trigger Print/Download Layout
-  const handleDownload = () => {
-    window.print();
+  // Trigger Print/Download Layout or Native Share on mobile
+  const handleDownload = async () => {
+    if (!qrUrl || !ticketData) return;
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const filename = `vanguard-pass-${ticketData.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+      const file = new File([blob], filename, { type: 'image/png' });
+      
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Vanguard Entry Pass',
+          text: `My QR entrance pass for VANGUARD // NOTHING!`
+        });
+      } else {
+        const link = document.createElement('a');
+        link.href = qrUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error sharing pass:', error);
+      window.print();
+    }
   };
 
   // Event info helper
@@ -251,10 +275,10 @@ function GuestPageContent() {
             
             <button
               onClick={handleDownload}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-zinc-950 transition-all hover:bg-[#ffe082] active:scale-95 shadow-lg shadow-[#cca43b]/10"
+              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-zinc-950 transition-all hover:bg-[#ffe082] active:scale-95 shadow-lg shadow-[#cca43b]/10 cursor-pointer"
             >
               <Download className="h-4 w-4" />
-              PRINT / SAVE
+              SHARE / SAVE
             </button>
           </div>
         </motion.div>

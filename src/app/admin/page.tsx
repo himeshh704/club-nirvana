@@ -207,6 +207,37 @@ export default function AdminPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleShareQR = async () => {
+    if (!generatedTicket) return;
+    try {
+      const response = await fetch(generatedTicket.qrDataUrl);
+      const blob = await response.blob();
+      const filename = `ticket-${generatedTicket.guestName.toLowerCase().replace(/\s+/g, '-')}.png`;
+      const file = new File([blob], filename, { type: 'image/png' });
+      
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Vanguard Entry Pass',
+          text: `Here is the signed QR entrance pass for ${generatedTicket.guestName}!`
+        });
+      } else {
+        const link = document.createElement('a');
+        link.href = generatedTicket.qrDataUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error sharing/saving QR code:', error);
+      const win = window.open();
+      if (win) {
+        win.document.write(`<img src="${generatedTicket.qrDataUrl}" style="max-width: 100%; height: auto; margin: auto; display: block;" />`);
+      }
+    }
+  };
+
   const percentCheckedIn = stats.totalGuests > 0 
     ? Math.round((stats.checkedIn / stats.totalGuests) * 100) 
     : 0;
@@ -462,14 +493,13 @@ export default function AdminPage() {
                       )}
                     </button>
                     
-                    <a
-                      href={generatedTicket.qrDataUrl}
-                      download={`ticket-${generatedTicket.guestName.toLowerCase().replace(/\s+/g, '-')}.png`}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#cca43b] py-3 text-xs font-bold text-black hover:bg-[#ffe082] active:scale-95 text-center block"
+                    <button
+                      onClick={handleShareQR}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#cca43b] py-3 text-xs font-bold text-black hover:bg-[#ffe082] active:scale-95 text-center cursor-pointer"
                     >
                       <Download className="h-4 w-4" />
-                      DOWNLOAD QR IMAGE
-                    </a>
+                      SHARE / SAVE QR IMAGE
+                    </button>
                   </div>
                 </motion.div>
               ) : (
