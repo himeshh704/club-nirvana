@@ -832,28 +832,45 @@ export default function AdminPage() {
 
       {/* Footer */}
       <footer className="mt-20 border-t border-zinc-900 bg-black/80 py-12 text-zinc-500">
-        <div className="mx-auto max-w-6xl px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <div className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-4 object-contain brightness-75 hover:brightness-100 transition-all" />
-              <span className="text-[9px] tracking-[0.25em] font-semibold text-zinc-600 uppercase">QR ENGINE</span>
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 pb-8 border-b border-zinc-900/60">
+            <div className="footer-brand">
+              <a href="#" className="cursor-pointer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/madsphere_logo.png" alt="MadSphere" className="h-9 object-contain" />
+              </a>
             </div>
-            <p className="text-[10px] text-zinc-600">
-              © {new Date().getFullYear()} MadSphere. All rights reserved.
-            </p>
+            
+            <div className="text-center md:text-left">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Connect</div>
+              <ul className="space-y-2 text-xs uppercase tracking-wider">
+                <li>
+                  <a href="https://instagram.com/madsphere.co" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    Instagram
+                  </a>
+                </li>
+                <li>
+                  <a href="https://linkedin.com/company/madsphere" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    LinkedIn
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:madsphere.info@gmail.com" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    Email Us
+                  </a>
+                </li>
+                <li>
+                  <a href="https://madsphere-web.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    Website
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-            <a href="#" className="hover:text-white transition-colors cursor-pointer">Help Desk</a>
-            <a href="#" className="hover:text-white transition-colors cursor-pointer">Support</a>
-            <a href="#" className="hover:text-white transition-colors cursor-pointer">Terms of Service</a>
-            <a href="#" className="hover:text-white transition-colors cursor-pointer">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors cursor-pointer">Contact Us</a>
-          </div>
-
-          <div className="text-[10px] text-zinc-500 font-semibold tracking-widest uppercase">
-            CREATED BY <a href="#" className="text-white hover:underline transition-all">MADSPHERE</a>
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 text-[10px] uppercase tracking-wider text-zinc-600">
+            <div>© 2026 MadSphere. All rights reserved. Built with purpose.</div>
+            <div>Digital Solutions Agency · India</div>
           </div>
         </div>
       </footer>
