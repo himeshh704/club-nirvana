@@ -174,10 +174,15 @@ export default function AdminPage() {
       });
 
       if (!res.ok) {
-        let errMsg = 'Branding update failed';
+        let errMsg = `Branding update failed (Status: ${res.status})`;
         try {
-          const errData = await res.json();
-          if (errData && errData.error) errMsg = errData.error;
+          const text = await res.text();
+          try {
+            const errData = JSON.parse(text);
+            if (errData && errData.error) errMsg = errData.error;
+          } catch (_) {
+            if (text) errMsg += `: ${text.slice(0, 100)}`;
+          }
         } catch (_) {}
         throw new Error(errMsg);
       }
