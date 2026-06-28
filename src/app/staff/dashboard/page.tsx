@@ -470,7 +470,7 @@ export default function StaffDashboard() {
       </header>
 
       {/* Main Container */}
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-8 flex flex-col justify-between">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 flex flex-col justify-between">
         
         {/* Scanner Area */}
         <div className="flex-1 flex flex-col items-center justify-center py-4">
@@ -482,15 +482,23 @@ export default function StaffDashboard() {
           </div>
 
           {!scannerActive && (
-            <button
-              onClick={toggleScanner}
-              className="group flex flex-col items-center justify-center gap-4 rounded-full border border-dashed border-zinc-800 bg-zinc-950/40 w-56 h-56 transition-all hover:border-[#cca43b] hover:bg-zinc-900/40 hover:shadow-[0_0_30px_rgba(204,164,59,0.08)] cursor-pointer"
-            >
-              <div className="rounded-full bg-zinc-900 group-hover:bg-[#cca43b]/10 p-5 transition-colors">
-                <QrCode className="h-10 w-10 text-zinc-400 group-hover:text-[#cca43b]" />
+            <div className="w-full text-center py-6 flex flex-col items-center gap-2">
+              <div className="rounded-2xl bg-zinc-950 border border-zinc-900 p-4 text-zinc-500 mb-2">
+                <QrCode className="h-8 w-8 text-zinc-400 mx-auto" />
               </div>
-              <span className="text-xs font-semibold tracking-widest text-zinc-500 group-hover:text-zinc-300">START CAMERA</span>
-            </button>
+              <h3 className="text-sm font-bold text-zinc-300 tracking-wider">GATE SCANNER DISCONNECTED</h3>
+              <p className="text-[11px] text-zinc-500 max-w-[250px] mx-auto leading-relaxed mb-4">
+                Terminal scanner is ready. Engage your mobile camera feed below.
+              </p>
+              
+              <button
+                onClick={toggleScanner}
+                className="w-full max-w-xs flex items-center justify-center gap-3 rounded-2xl bg-[#cca43b] hover:bg-[#ffe082] py-4 text-sm font-bold text-black transition-all active:scale-95 cursor-pointer shadow-lg shadow-[#cca43b]/10"
+              >
+                <QrCode className="h-5 w-5" />
+                START CAMERA SCANNER
+              </button>
+            </div>
           )}
 
           {scannerActive && (
