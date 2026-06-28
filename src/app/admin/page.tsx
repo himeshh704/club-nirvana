@@ -17,7 +17,9 @@ import {
   RefreshCcw,
   ShieldCheck,
   Search,
-  MessageSquare
+  MessageSquare,
+  XCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
@@ -76,7 +78,7 @@ export default function AdminPage() {
   const [copied, setCopied] = useState(false);
 
   // White-label settings states
-  const [activeTab, setActiveTab] = useState<'create' | 'branding' | 'scanner'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'branding'>('create');
   const [brandTitle, setBrandTitle] = useState('VANGUARD // NOTHING');
   const [brandSubtitle, setBrandSubtitle] = useState('AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE');
   const [brandDate, setBrandDate] = useState('To Be Disclosed');
@@ -88,7 +90,7 @@ export default function AdminPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Gate Scanner tab states inside Admin Panel
-  const [scannerActive, setScannerActive] = useState(false);
+  const [adminScannerOpen, setAdminScannerOpen] = useState(false);
   const [scanningResult, setScanningResult] = useState<string>('idle'); // idle, valid, already_used, invalid, banned
   const [scanningDetails, setScanningDetails] = useState({
     name: '',
@@ -208,7 +210,7 @@ export default function AdminPage() {
         console.error('Error pausing scanner:', err);
       }
     }
-    setScannerActive(false);
+    setAdminScannerOpen(false);
 
     try {
       const res = await fetch('/api/tickets/scan', {
@@ -257,24 +259,24 @@ export default function AdminPage() {
   };
 
   const toggleAdminScanner = async () => {
-    if (scannerActive) {
+    if (adminScannerOpen) {
       if (html5QrCodeRef.current) {
         try {
           if (html5QrCodeRef.current.isScanning) {
             await html5QrCodeRef.current.stop();
           }
-          setScannerActive(false);
+          setAdminScannerOpen(false);
         } catch (err) {
           console.error('Error stopping scanner:', err);
         }
       }
     } else {
-      setScannerActive(true);
+      setAdminScannerOpen(true);
       setScanningResult('idle');
       setTimeout(async () => {
         try {
           if (!html5QrCodeRef.current) {
-            html5QrCodeRef.current = new Html5Qrcode("admin-reader");
+            html5QrCodeRef.current = new Html5Qrcode("admin-modal-reader");
           }
           await html5QrCodeRef.current.start(
             { facingMode: "environment" },
@@ -287,7 +289,7 @@ export default function AdminPage() {
         } catch (err) {
           console.error('Failed to start scanner:', err);
           alert('Could not access camera. Please check permissions.');
-          setScannerActive(false);
+          setAdminScannerOpen(false);
         }
       }, 100);
     }
@@ -593,7 +595,6 @@ export default function AdminPage() {
           <div className="flex flex-wrap justify-center gap-2 md:gap-4">
             <a href="/" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
             <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
-            <a href="/staff/dashboard" className={`rounded-full bg-purple-900/35 border border-purple-850 px-4 py-1.5 text-[10px] md:text-xs text-purple-300 hover:bg-purple-800 transition-all font-semibold`}>LAUNCH SCANNER</a>
           </div>
         </div>
       </header>
@@ -669,7 +670,7 @@ export default function AdminPage() {
             <div className="flex gap-2 bg-black/40 border border-zinc-900 p-1 rounded-2xl">
               <button
                 onClick={() => {
-                  if (scannerActive) toggleAdminScanner();
+                  if (adminScannerOpen) toggleAdminScanner();
                   setActiveTab('create');
                 }}
                 className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
@@ -682,7 +683,7 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={() => {
-                  if (scannerActive) toggleAdminScanner();
+                  if (adminScannerOpen) toggleAdminScanner();
                   setActiveTab('branding');
                 }}
                 className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
@@ -692,18 +693,6 @@ export default function AdminPage() {
                 }`}
               >
                 BRANDING SETTINGS
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('scanner');
-                }}
-                className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
-                  activeTab === 'scanner'
-                    ? `${activeTheme.bg} text-zinc-950 shadow-md`
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
-                }`}
-              >
-                GATE SCANNER
               </button>
             </div>
 
@@ -982,74 +971,6 @@ export default function AdminPage() {
                 </form>
               </div>
             )}
-
-            {activeTab === 'scanner' && (
-              <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl space-y-6">
-                <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-4">
-                  <QrCode className={`h-5 w-5 ${activeTheme.text}`} />
-                  <h3 className="text-lg font-bold tracking-wide">LIVE GATE SCANNER</h3>
-                </div>
-
-                <div className="flex flex-col items-center justify-center py-4">
-                  {/* Camera view box */}
-                  <div className={`relative w-full max-w-xs aspect-square overflow-hidden rounded-3xl border-2 border-dashed bg-black ${scannerActive ? activeTheme.border : 'border-zinc-800'}`}>
-                    <div id="admin-reader" className="w-full h-full"></div>
-                    {/* Scan indicator overlay */}
-                    {scannerActive && (
-                      <div className={`absolute inset-8 border border-dashed ${activeTheme.borderDashed} pointer-events-none rounded-xl animate-pulse`}></div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={toggleAdminScanner}
-                    className={`mt-6 w-full max-w-xs flex items-center justify-center gap-3 rounded-2xl py-4 text-sm font-bold text-white transition-all active:scale-95 cursor-pointer shadow-lg ${
-                      scannerActive 
-                        ? 'bg-zinc-900 hover:bg-zinc-850 border border-zinc-850' 
-                        : `${activeTheme.bg} text-zinc-950 hover:brightness-110`
-                    }`}
-                  >
-                    <QrCode className="h-5 w-5" />
-                    {scannerActive ? 'STOP CAMERA SCANNER' : 'START CAMERA SCANNER'}
-                  </button>
-                </div>
-
-                {/* Scan Results Display */}
-                {scanningResult !== 'idle' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`rounded-2xl border p-4 text-center ${
-                      scanningResult === 'valid' 
-                        ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400'
-                        : scanningResult === 'already_used'
-                        ? 'bg-amber-950/20 border-amber-500/30 text-amber-400'
-                        : 'bg-red-950/20 border-red-500/30 text-red-400'
-                    }`}
-                  >
-                    <h4 className="font-extrabold text-sm uppercase tracking-wider">
-                      {scanningResult === 'valid' && '✓ ENTRY ALLOWED'}
-                      {scanningResult === 'already_used' && '⚠ ALREADY CHECKED IN'}
-                      {scanningResult === 'invalid' && '✗ INVALID TICKET'}
-                      {scanningResult === 'banned' && '✗ BLACKLISTED GUEST'}
-                    </h4>
-                    <p className="text-xs font-semibold mt-1 text-white">
-                      {scanningDetails.name} ({scanningDetails.ticketType})
-                    </p>
-                    {scanningDetails.message && (
-                      <p className="text-[10px] text-zinc-400 mt-2 italic">
-                        {scanningDetails.message}
-                      </p>
-                    )}
-                    {scanningResult === 'already_used' && scanningDetails.usedAt && (
-                      <p className="text-[10px] text-zinc-400 mt-1">
-                        First scanned: {new Date(scanningDetails.usedAt).toLocaleString()}
-                      </p>
-                    )}
-                  </motion.div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Generated Ticket Display Output */}
@@ -1234,6 +1155,157 @@ export default function AdminPage() {
           </div>
         </div>
       </footer>
+
+      {/* Full-screen Scanner Overlay Modal */}
+      <AnimatePresence>
+        {adminScannerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-6 backdrop-blur-md"
+          >
+            <div className="w-full max-w-md flex flex-col items-center gap-6">
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-bold tracking-widest uppercase text-white">GATE SCAN TERMINAL</h3>
+                <p className="text-xs text-zinc-500 font-light">Point camera at the ticket pass QR code</p>
+              </div>
+
+              {/* Camera scanner aspect container */}
+              <div className={`relative w-full max-w-xs aspect-square overflow-hidden rounded-3xl border-2 border-dashed bg-black/40 ${activeTheme.border}`}>
+                <div id="admin-modal-reader" className="w-full h-full"></div>
+                <div className={`absolute inset-8 border border-dashed ${activeTheme.borderDashed} pointer-events-none rounded-xl animate-pulse`}></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleAdminScanner}
+                className="rounded-full bg-zinc-900 border border-zinc-800 px-8 py-3.5 text-xs font-bold tracking-wider text-zinc-400 hover:text-white transition-all cursor-pointer"
+              >
+                CLOSE CAMERA SCAN
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Scan QR Button (Paytm style, synced with selected theme color!) */}
+      {!adminScannerOpen && (
+        <button
+          onClick={toggleAdminScanner}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 rounded-full px-8 py-3.5 text-sm font-extrabold text-white active:scale-95 transition-all cursor-pointer whitespace-nowrap shadow-lg ${
+            brandColor === 'gold' ? 'bg-gradient-to-r from-amber-600 via-[#cca43b] to-yellow-600 border border-amber-400/20 shadow-amber-500/20' :
+            brandColor === 'pink' ? 'bg-gradient-to-r from-pink-600 via-pink-500 to-rose-600 border border-pink-400/20 shadow-pink-500/20' :
+            brandColor === 'purple' ? 'bg-gradient-to-r from-purple-600 via-purple-500 to-violet-600 border border-purple-400/20 shadow-purple-500/20' :
+            brandColor === 'emerald' ? 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-600 border border-emerald-400/20 shadow-emerald-500/20' :
+            'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 border border-blue-400/20 shadow-blue-500/20'
+          }`}
+        >
+          <QrCode className="h-5 w-5 text-white animate-pulse" />
+          <span>Scan QR</span>
+        </button>
+      )}
+
+      {/* Scan Results Overlay Alert Modal */}
+      <AnimatePresence>
+        {scanningResult !== 'idle' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className={`w-full max-w-sm rounded-3xl border p-6 text-center space-y-6 shadow-2xl ${
+                scanningResult === 'valid' 
+                  ? 'bg-zinc-950 border-emerald-500/20 shadow-emerald-500/5' 
+                  : 'bg-zinc-950 border-red-500/20 shadow-red-500/5'
+              }`}
+            >
+              {/* Result Icon */}
+              <div className="flex justify-center">
+                {scanningResult === 'valid' && (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <UserCheck className="h-8 w-8" />
+                  </div>
+                )}
+                {scanningResult === 'already_used' && (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-bounce">
+                    <AlertTriangle className="h-8 w-8" />
+                  </div>
+                )}
+                {(scanningResult === 'invalid' || scanningResult === 'banned') && (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
+                    <XCircle className="h-8 w-8" />
+                  </div>
+                )}
+              </div>
+
+              {/* Status Header */}
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">GATE VALIDATION</span>
+                <h2 className="text-2xl font-extrabold tracking-wide uppercase text-white">
+                  {scanningResult === 'valid' && 'ENTRY ALLOWED'}
+                  {scanningResult === 'already_used' && 'ALREADY SCANNED'}
+                  {scanningResult === 'invalid' && 'INVALID SIGNATURE'}
+                  {scanningResult === 'banned' && 'BLACKLISTED PASS'}
+                </h2>
+              </div>
+
+              {/* Attendee details */}
+              <div className="rounded-2xl bg-zinc-900/60 border border-zinc-850 p-5 text-left">
+                <span className="text-[9px] text-zinc-500 uppercase tracking-widest block">GUEST RECORD</span>
+                <span className="text-xl font-bold mt-1 block text-white">{scanningDetails.name}</span>
+                
+                <span className={`inline-block mt-3 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase ${
+                  scanningDetails.ticketType === 'VIP' ? 'bg-[#ffe082]/10 text-[#ffe082] border border-[#ffe082]/20' : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                }`}>
+                  {scanningDetails.ticketType} PASS
+                </span>
+
+                <div className="mt-4 border-t border-zinc-800/80 pt-3 text-xs space-y-2 text-zinc-400">
+                  {scanningResult === 'valid' && (
+                    <div className="flex justify-between">
+                      <span>Assigned Gate:</span>
+                      <span className="font-semibold text-emerald-400">Admin Console</span>
+                    </div>
+                  )}
+                  {scanningResult === 'already_used' && (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Original Scan:</span>
+                        <span className="font-semibold text-amber-400">
+                          {scanningDetails.usedAt ? new Date(scanningDetails.usedAt).toLocaleTimeString() : 'N/A'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">
+                        Ticket credentials have already been checked in.
+                      </p>
+                    </>
+                  )}
+                  {scanningDetails.message && (
+                    <p className="text-[10px] text-red-400 text-center font-medium mt-2">
+                      {scanningDetails.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Resume scanner button */}
+              <button
+                onClick={() => setScanningResult('idle')}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold tracking-wider text-black transition-all active:scale-95 cursor-pointer bg-white hover:bg-zinc-200"
+              >
+                <UserCheck className="h-4 w-4" />
+                CONFIRM & RESUME
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
