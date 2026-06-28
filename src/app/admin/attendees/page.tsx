@@ -40,6 +40,13 @@ export default function AttendeeDirectory() {
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Dynamic branding settings for WhatsApp share message text
+  const [eventSettings, setEventSettings] = useState({
+    title: 'VANGUARD // NOTHING',
+    venue: 'Club Nirvana',
+    address: 'Jodhpur'
+  });
+
   const fetchAttendees = async () => {
     setLoading(true);
     try {
@@ -68,6 +75,20 @@ export default function AttendeeDirectory() {
     
     setAuthorized(true);
     fetchAttendees();
+
+    // Fetch dynamic event settings
+    fetch('/api/event/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.title) {
+          setEventSettings({
+            title: data.title,
+            venue: data.venue,
+            address: data.address
+          });
+        }
+      })
+      .catch(err => console.error('Error fetching settings for WhatsApp template:', err));
   }, [router]);
 
   // Filter and Search logic
@@ -171,7 +192,7 @@ export default function AttendeeDirectory() {
       cleanNumber = '91' + cleanNumber; // Default to India country code
     }
     const passLink = `${window.location.origin}/?ticket=${qrToken}`;
-    const message = `Hey *${name}*! 🎟️\n\nHere is your entrance ticket pass for *VANGUARD // NOTHING* at Club Nirvana, Jodhpur.\n\nType: *${ticketType}*\nPass Link: ${passLink}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
+    const message = `Hey *${name}*! 🎟️\n\nHere is your entrance ticket pass for *${eventSettings.title}* at ${eventSettings.venue}, ${eventSettings.address}.\n\nType: *${ticketType}*\nPass Link: ${passLink}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
