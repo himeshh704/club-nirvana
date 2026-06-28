@@ -488,27 +488,10 @@ export default function StaffDashboard() {
                 <QrCode className="h-8 w-8 text-zinc-400 mx-auto" />
               </div>
               <h3 className="text-sm font-bold text-zinc-300 tracking-wider">GATE SCANNER DISCONNECTED</h3>
-              <p className="text-[11px] text-zinc-500 max-w-[250px] mx-auto leading-relaxed mb-4">
-                Terminal scanner is ready. Engage your mobile camera feed below.
+              <p className="text-[11px] text-zinc-500 max-w-[250px] mx-auto leading-relaxed">
+                Terminal scanner is ready. Tap the floating &quot;Scan QR&quot; button below to open your camera.
               </p>
-              
-              <button
-                onClick={toggleScanner}
-                className="w-full max-w-xs flex items-center justify-center gap-3 rounded-2xl bg-[#cca43b] hover:bg-[#ffe082] py-4 text-sm font-bold text-black transition-all active:scale-95 cursor-pointer shadow-lg shadow-[#cca43b]/10"
-              >
-                <QrCode className="h-5 w-5" />
-                START CAMERA SCANNER
-              </button>
             </div>
-          )}
-
-          {scannerActive && (
-            <button
-              onClick={toggleScanner}
-              className="mt-6 rounded-xl bg-zinc-900 border border-zinc-850 px-5 py-2.5 text-xs font-semibold text-zinc-400 cursor-pointer"
-            >
-              CANCEL CAMERA SCAN
-            </button>
           )}
         </div>
 
@@ -658,6 +641,19 @@ export default function StaffDashboard() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Floating upfront Scan QR button (Paytm/PhonePe style) */}
+      <button
+        onClick={toggleScanner}
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 rounded-full px-8 py-3.5 text-sm font-extrabold text-white active:scale-95 transition-all cursor-pointer whitespace-nowrap border ${
+          scannerActive 
+            ? 'bg-zinc-900 border-zinc-800 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:bg-zinc-800' 
+            : 'bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 border-blue-400/20 shadow-[0_8px_30px_rgba(37,99,235,0.45)] hover:from-blue-500 hover:to-indigo-500'
+        }`}
+      >
+        <QrCode className={`h-5 w-5 text-white ${!scannerActive ? 'animate-pulse' : ''}`} />
+        <span>{scannerActive ? 'Cancel Scan' : 'Scan QR'}</span>
+      </button>
     </div>
   );
 }
