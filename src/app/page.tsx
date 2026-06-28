@@ -527,9 +527,8 @@ function GuestPageContent() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 text-[10px] uppercase tracking-wider text-zinc-600">
+          <div className="pt-6 text-center text-[10px] uppercase tracking-wider text-zinc-600 border-t border-zinc-900/60">
             <div>© 2026 MadSphere. All rights reserved. Built with purpose.</div>
-            <div>Digital Solutions Agency · India</div>
           </div>
         </div>
       </footer>
