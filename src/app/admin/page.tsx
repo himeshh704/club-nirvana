@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Users, 
@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface DashboardStats {
   totalGuests: number;
@@ -75,7 +76,7 @@ export default function AdminPage() {
   const [copied, setCopied] = useState(false);
 
   // White-label settings states
-  const [activeTab, setActiveTab] = useState<'create' | 'branding'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'branding' | 'scanner'>('create');
   const [brandTitle, setBrandTitle] = useState('VANGUARD // NOTHING');
   const [brandSubtitle, setBrandSubtitle] = useState('AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE');
   const [brandDate, setBrandDate] = useState('To Be Disclosed');
@@ -85,6 +86,17 @@ export default function AdminPage() {
   const [brandColor, setBrandColor] = useState('gold');
   const [savingBranding, setSavingBranding] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Gate Scanner tab states inside Admin Panel
+  const [scannerActive, setScannerActive] = useState(false);
+  const [scanningResult, setScanningResult] = useState<string>('idle'); // idle, valid, already_used, invalid, banned
+  const [scanningDetails, setScanningDetails] = useState({
+    name: '',
+    ticketType: '',
+    message: '',
+    usedAt: ''
+  });
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   // Lineup & Support States
   const [brandLineupArtist, setBrandLineupArtist] = useState('KAYLA (Berlin)');
@@ -133,6 +145,151 @@ export default function AdminPage() {
       console.error('Error fetching admin metrics:', error);
     } finally {
       setLoadingStats(false);
+    }
+  };
+
+  // Clean up scanner on unmount
+  useEffect(() => {
+    return () => {
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(err => console.error('Cleanup scanner error:', err));
+      }
+    };
+  }, []);
+
+  const playSynthSound = (success: boolean) => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (success) {
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.1);
+
+        setTimeout(() => {
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(1200, ctx.currentTime);
+          gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+          osc2.start();
+          osc2.stop(ctx.currentTime + 0.15);
+        }, 100);
+      } else {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      }
+    } catch (err) {
+      console.warn('Sound synthesis failed', err);
+    }
+  };
+
+  const handleAdminTicketScan = async (qrToken: string) => {
+    if (html5QrCodeRef.current) {
+      try {
+        await html5QrCodeRef.current.stop();
+      } catch (err) {
+        console.error('Error pausing scanner:', err);
+      }
+    }
+    setScannerActive(false);
+
+    try {
+      const res = await fetch('/api/tickets/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          qrToken,
+          gate: 'Admin Gate',
+          scannerDevice: 'Admin Console'
+        })
+      });
+
+      if (!res.ok) throw new Error('API verify failed');
+      const data = await res.json();
+
+      setScanningResult(data.status);
+      setScanningDetails({
+        name: data.guestName || 'Unknown Guest',
+        ticketType: data.ticketType || 'Regular',
+        message: data.message || '',
+        usedAt: data.usedAt || ''
+      });
+
+      if (data.status === 'valid') {
+        playSynthSound(true);
+        if (data.ticketType === 'VIP') {
+          confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+        }
+      } else {
+        playSynthSound(false);
+      }
+      
+      // Update statistics and tables
+      fetchMetrics();
+    } catch (err) {
+      console.error('Admin scan verification error:', err);
+      setScanningResult('invalid');
+      setScanningDetails({
+        name: 'Verification Failed',
+        ticketType: 'Unknown',
+        message: 'Database check failed or connection lost.',
+        usedAt: ''
+      });
+      playSynthSound(false);
+    }
+  };
+
+  const toggleAdminScanner = async () => {
+    if (scannerActive) {
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
+          setScannerActive(false);
+        } catch (err) {
+          console.error('Error stopping scanner:', err);
+        }
+      }
+    } else {
+      setScannerActive(true);
+      setScanningResult('idle');
+      setTimeout(async () => {
+        try {
+          if (!html5QrCodeRef.current) {
+            html5QrCodeRef.current = new Html5Qrcode("admin-reader");
+          }
+          await html5QrCodeRef.current.start(
+            { facingMode: "environment" },
+            { fps: 20 },
+            (decodedText) => {
+              handleAdminTicketScan(decodedText);
+            },
+            () => {}
+          );
+        } catch (err) {
+          console.error('Failed to start scanner:', err);
+          alert('Could not access camera. Please check permissions.');
+          setScannerActive(false);
+        }
+      }, 100);
     }
   };
 
@@ -374,6 +531,55 @@ export default function AdminPage() {
     );
   }
 
+  const themes: Record<string, { bg: string; text: string; border: string; borderDashed: string; glow: string; textHover: string; badge: string }> = {
+    gold: {
+      bg: 'bg-[#cca43b]',
+      text: 'text-[#cca43b]',
+      border: 'border-[#cca43b]',
+      borderDashed: 'border-[#cca43b]/40',
+      glow: 'shadow-[#cca43b]/10',
+      textHover: 'hover:text-[#cca43b]',
+      badge: 'bg-[#cca43b]/10 border-[#cca43b]/20 text-[#cca43b]'
+    },
+    pink: {
+      bg: 'bg-pink-500',
+      text: 'text-pink-500',
+      border: 'border-pink-500',
+      borderDashed: 'border-pink-500/40',
+      glow: 'shadow-pink-500/10',
+      textHover: 'hover:text-pink-500',
+      badge: 'bg-pink-500/10 border-pink-500/20 text-pink-500'
+    },
+    purple: {
+      bg: 'bg-purple-600',
+      text: 'text-purple-500',
+      border: 'border-purple-500',
+      borderDashed: 'border-purple-500/40',
+      glow: 'shadow-purple-500/10',
+      textHover: 'hover:text-purple-500',
+      badge: 'bg-purple-500/10 border-purple-500/20 text-purple-500'
+    },
+    emerald: {
+      bg: 'bg-emerald-500',
+      text: 'text-emerald-500',
+      border: 'border-emerald-500',
+      borderDashed: 'border-emerald-500/40',
+      glow: 'shadow-emerald-500/10',
+      textHover: 'hover:text-emerald-500',
+      badge: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
+    },
+    blue: {
+      bg: 'bg-blue-600',
+      text: 'text-blue-500',
+      border: 'border-blue-500',
+      borderDashed: 'border-blue-500/40',
+      glow: 'shadow-blue-500/10',
+      textHover: 'hover:text-blue-500',
+      badge: 'bg-blue-600/10 border-blue-600/20 text-blue-500'
+    }
+  };
+  const activeTheme = themes[brandColor] || themes.gold;
+
   return (
     <div className="min-h-screen bg-[#030303] text-white">
       {/* Navbar */}
@@ -387,7 +593,7 @@ export default function AdminPage() {
           <div className="flex flex-wrap justify-center gap-2 md:gap-4">
             <a href="/" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
             <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
-            <a href="/staff/dashboard" className="rounded-full bg-purple-900/35 border border-purple-850 px-4 py-1.5 text-[10px] md:text-xs text-purple-300 hover:bg-purple-800 transition-all font-semibold">LAUNCH SCANNER</a>
+            <a href="/staff/dashboard" className={`rounded-full bg-purple-900/35 border border-purple-850 px-4 py-1.5 text-[10px] md:text-xs text-purple-300 hover:bg-purple-800 transition-all font-semibold`}>LAUNCH SCANNER</a>
           </div>
         </div>
       </header>
@@ -401,7 +607,7 @@ export default function AdminPage() {
           <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
             <div className="flex justify-between items-center text-zinc-500">
               <span className="text-xs uppercase tracking-wider font-semibold">Total Guests</span>
-              <Ticket className="h-4 w-4 text-[#cca43b]" />
+              <Ticket className={`h-4 w-4 ${activeTheme.text}`} />
             </div>
             {loadingStats ? (
               <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
@@ -414,7 +620,7 @@ export default function AdminPage() {
           <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
             <div className="flex justify-between items-center text-zinc-500">
               <span className="text-xs uppercase tracking-wider font-semibold">Checked In</span>
-              <UserCheck className="h-4 w-4 text-[#cca43b]" />
+              <UserCheck className={`h-4 w-4 ${activeTheme.text}`} />
             </div>
             {loadingStats ? (
               <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
@@ -422,7 +628,7 @@ export default function AdminPage() {
               <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.checkedIn}</h2>
             )}
             <div className="mt-2 w-full bg-zinc-950 rounded-full h-1.5">
-              <div className="bg-[#cca43b] h-1.5 rounded-full" style={{ width: `${percentCheckedIn}%` }}></div>
+              <div className={`${activeTheme.bg} h-1.5 rounded-full`} style={{ width: `${percentCheckedIn}%` }}></div>
             </div>
             <p className="text-[10px] text-zinc-500 mt-1">{percentCheckedIn}% Complete</p>
           </div>
@@ -443,14 +649,14 @@ export default function AdminPage() {
           <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
             <div className="flex justify-between items-center text-zinc-500">
               <span className="text-xs uppercase tracking-wider font-semibold">VIP Members</span>
-              <Sparkles className="h-4 w-4 text-[#ffe082]" />
+              <Sparkles className={`h-4 w-4 ${activeTheme.text}`} />
             </div>
             {loadingStats ? (
               <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
             ) : (
-              <h2 className="text-3xl font-extrabold mt-1 tracking-wide text-[#ffe082]">{stats.vipGuests}</h2>
+              <h2 className={`text-3xl font-extrabold mt-1 tracking-wide ${activeTheme.text}`}>{stats.vipGuests}</h2>
             )}
-            <p className="text-[10px] text-[#ffe082]/60 mt-2">VIP lounge credentials</p>
+            <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>VIP lounge credentials</p>
           </div>
         </div>
 
@@ -462,31 +668,49 @@ export default function AdminPage() {
             {/* Tabs */}
             <div className="flex gap-2 bg-black/40 border border-zinc-900 p-1 rounded-2xl">
               <button
-                onClick={() => setActiveTab('create')}
+                onClick={() => {
+                  if (scannerActive) toggleAdminScanner();
+                  setActiveTab('create');
+                }}
                 className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
                   activeTab === 'create'
-                    ? 'bg-[#cca43b] text-zinc-950 shadow-md'
+                    ? `${activeTheme.bg} text-zinc-950 shadow-md`
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
                 }`}
               >
                 TICKET CREATOR
               </button>
               <button
-                onClick={() => setActiveTab('branding')}
+                onClick={() => {
+                  if (scannerActive) toggleAdminScanner();
+                  setActiveTab('branding');
+                }}
                 className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
                   activeTab === 'branding'
-                    ? 'bg-[#cca43b] text-zinc-950 shadow-md'
+                    ? `${activeTheme.bg} text-zinc-950 shadow-md`
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
                 }`}
               >
                 BRANDING SETTINGS
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('scanner');
+                }}
+                className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'scanner'
+                    ? `${activeTheme.bg} text-zinc-950 shadow-md`
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                }`}
+              >
+                GATE SCANNER
               </button>
             </div>
 
             {activeTab === 'create' ? (
               <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
                 <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
-                  <PlusCircle className="h-5 w-5 text-[#cca43b]" />
+                  <PlusCircle className={`h-5 w-5 ${activeTheme.text}`} />
                   <h3 className="text-lg font-bold tracking-wide">QUICK TICKET PASS GENERATOR</h3>
                 </div>
 
@@ -562,7 +786,7 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     disabled={generating}
-                    className="mt-4 w-full rounded-xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:bg-[#ffe082] active:scale-95 disabled:opacity-50"
+                    className={`mt-4 w-full rounded-xl ${activeTheme.bg} py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:brightness-110 active:scale-95 disabled:opacity-50`}
                   >
                     {generating ? 'GENERATING SECURE QR...' : 'CREATE TICKET & SIGN QR'}
                   </button>
@@ -571,7 +795,7 @@ export default function AdminPage() {
             ) : (
               <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
                 <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
-                  <Compass className="h-5 w-5 text-[#cca43b]" />
+                  <Compass className={`h-5 w-5 ${activeTheme.text}`} />
                   <h3 className="text-lg font-bold tracking-wide">WHITE-LABEL EVENT BRANDING</h3>
                 </div>
 
@@ -751,11 +975,79 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     disabled={savingBranding}
-                    className="w-full rounded-xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:bg-[#ffe082] active:scale-95 disabled:opacity-50 cursor-pointer mt-4"
+                    className={`w-full rounded-xl ${activeTheme.bg} py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 cursor-pointer mt-4`}
                   >
                     {savingBranding ? 'SAVING CONFIGURATIONS...' : 'SAVE EVENT BRANDING'}
                   </button>
                 </form>
+              </div>
+            )}
+
+            {activeTab === 'scanner' && (
+              <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl space-y-6">
+                <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-4">
+                  <QrCode className={`h-5 w-5 ${activeTheme.text}`} />
+                  <h3 className="text-lg font-bold tracking-wide">LIVE GATE SCANNER</h3>
+                </div>
+
+                <div className="flex flex-col items-center justify-center py-4">
+                  {/* Camera view box */}
+                  <div className={`relative w-full max-w-xs aspect-square overflow-hidden rounded-3xl border-2 border-dashed bg-black ${scannerActive ? activeTheme.border : 'border-zinc-800'}`}>
+                    <div id="admin-reader" className="w-full h-full"></div>
+                    {/* Scan indicator overlay */}
+                    {scannerActive && (
+                      <div className={`absolute inset-8 border border-dashed ${activeTheme.borderDashed} pointer-events-none rounded-xl animate-pulse`}></div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={toggleAdminScanner}
+                    className={`mt-6 w-full max-w-xs flex items-center justify-center gap-3 rounded-2xl py-4 text-sm font-bold text-white transition-all active:scale-95 cursor-pointer shadow-lg ${
+                      scannerActive 
+                        ? 'bg-zinc-900 hover:bg-zinc-850 border border-zinc-850' 
+                        : `${activeTheme.bg} text-zinc-950 hover:brightness-110`
+                    }`}
+                  >
+                    <QrCode className="h-5 w-5" />
+                    {scannerActive ? 'STOP CAMERA SCANNER' : 'START CAMERA SCANNER'}
+                  </button>
+                </div>
+
+                {/* Scan Results Display */}
+                {scanningResult !== 'idle' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`rounded-2xl border p-4 text-center ${
+                      scanningResult === 'valid' 
+                        ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400'
+                        : scanningResult === 'already_used'
+                        ? 'bg-amber-950/20 border-amber-500/30 text-amber-400'
+                        : 'bg-red-950/20 border-red-500/30 text-red-400'
+                    }`}
+                  >
+                    <h4 className="font-extrabold text-sm uppercase tracking-wider">
+                      {scanningResult === 'valid' && '✓ ENTRY ALLOWED'}
+                      {scanningResult === 'already_used' && '⚠ ALREADY CHECKED IN'}
+                      {scanningResult === 'invalid' && '✗ INVALID TICKET'}
+                      {scanningResult === 'banned' && '✗ BLACKLISTED GUEST'}
+                    </h4>
+                    <p className="text-xs font-semibold mt-1 text-white">
+                      {scanningDetails.name} ({scanningDetails.ticketType})
+                    </p>
+                    {scanningDetails.message && (
+                      <p className="text-[10px] text-zinc-400 mt-2 italic">
+                        {scanningDetails.message}
+                      </p>
+                    )}
+                    {scanningResult === 'already_used' && scanningDetails.usedAt && (
+                      <p className="text-[10px] text-zinc-400 mt-1">
+                        First scanned: {new Date(scanningDetails.usedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </motion.div>
+                )}
               </div>
             )}
           </div>
