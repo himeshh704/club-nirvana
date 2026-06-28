@@ -173,7 +173,14 @@ export default function AdminPage() {
         })
       });
 
-      if (!res.ok) throw new Error('Branding update failed');
+      if (!res.ok) {
+        let errMsg = 'Branding update failed';
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) errMsg = errData.error;
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
       const data = await res.json();
       if (data.success) {
         setSaveSuccess(true);
