@@ -30,6 +30,27 @@ export async function POST(request: Request) {
 
     let userId = existingUser?.id;
 
+    if (userId) {
+      // Check if user already has an active ticket to prevent duplicates
+      const { data: existingTicket, error: ticketCheckError } = await supabaseAdmin
+        .from('tickets')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (ticketCheckError) {
+        console.error('Error checking for existing ticket:', ticketCheckError);
+        return NextResponse.json({ error: 'Database verification failed' }, { status: 500 });
+      }
+
+      if (existingTicket) {
+        return NextResponse.json(
+          { error: 'This guest (phone number) already has an active ticket generated!' },
+          { status: 400 }
+        );
+      }
+    }
+
     if (!userId) {
       const { data: newUser, error: createError } = await supabaseAdmin
         .from('users')
