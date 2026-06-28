@@ -219,7 +219,7 @@ export default function AttendeeDirectory() {
     <div className="min-h-screen bg-[#030303] text-white">
       {/* Header */}
       <header className="border-b border-zinc-900 bg-black/40 px-6 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+        <div className="mx-auto flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex items-center gap-4">
             <a href="/admin" className="rounded-xl bg-zinc-950 border border-zinc-900 p-2.5 text-zinc-400 hover:text-white">
               <ArrowLeft className="h-4 w-4" />
@@ -232,7 +232,7 @@ export default function AttendeeDirectory() {
           
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-500 transition-all"
+            className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-500 transition-all w-full sm:w-auto justify-center"
           >
             <Download className="h-4 w-4" />
             EXPORT TO CSV

@@ -361,19 +361,19 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060608] text-white">
+    <div className="min-h-screen bg-[#030303] text-white">
       {/* Navbar */}
       <header className="border-b border-zinc-900 bg-black/40 px-6 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+        <div className="mx-auto flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-5 object-contain" />
             <span className="text-[10px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">CONTROL CENTRE</span>
           </div>
-          <div className="flex gap-4">
-            <a href="/" className="rounded-full border border-white/5 px-4 py-1.5 text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
-            <a href="/admin/attendees" className="rounded-full border border-white/5 px-4 py-1.5 text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
-            <a href="/staff/dashboard" className="rounded-full bg-zinc-900 border border-zinc-800 px-4 py-1.5 text-xs text-[#cca43b] hover:bg-zinc-800 transition-all">LAUNCH SCANNER</a>
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4">
+            <a href="/" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
+            <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
+            <a href="/staff/dashboard" className="rounded-full bg-purple-900/35 border border-purple-850 px-4 py-1.5 text-[10px] md:text-xs text-purple-300 hover:bg-purple-800 transition-all font-semibold">LAUNCH SCANNER</a>
           </div>
         </div>
       </header>
