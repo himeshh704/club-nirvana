@@ -216,7 +216,7 @@ export default function AttendeeDirectory() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060608] text-white">
+    <div className="min-h-screen bg-[#030303] text-white">
       {/* Header */}
       <header className="border-b border-zinc-900 bg-black/40 px-6 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
@@ -225,14 +225,14 @@ export default function AttendeeDirectory() {
               <ArrowLeft className="h-4 w-4" />
             </a>
             <div>
-              <h1 className="text-xl font-bold tracking-widest">ATTENDEE DIRECTORY</h1>
+              <h1 className="text-xl font-bold tracking-widest text-white">ATTENDEE DIRECTORY</h1>
               <p className="text-xs text-zinc-500 font-light">Manage registrations, blacklist overrides, and entry logs</p>
             </div>
           </div>
           
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-2 rounded-xl bg-[#cca43b] px-5 py-2.5 text-xs font-bold text-black hover:bg-[#ffe082] transition-all"
+            className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-500 transition-all"
           >
             <Download className="h-4 w-4" />
             EXPORT TO CSV
@@ -265,7 +265,7 @@ export default function AttendeeDirectory() {
                 onClick={() => setFilterType(type)}
                 className={`rounded-xl px-4 py-2.5 text-xs font-semibold border transition-all ${
                   filterType === type 
-                    ? 'bg-[#cca43b] border-[#cca43b] text-zinc-950' 
+                    ? 'bg-purple-600 border-purple-600 text-white' 
                     : 'bg-zinc-950 border-zinc-900 text-zinc-400 hover:text-white'
                 }`}
               >
@@ -434,6 +434,50 @@ export default function AttendeeDirectory() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-20 border-t border-zinc-900 bg-black/80 py-12 text-zinc-500">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 pb-8 border-b border-zinc-900/60">
+            <div className="footer-brand">
+              <a href="#" className="cursor-pointer">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/madsphere_logo.png" alt="MadSphere" className="h-9 object-contain" />
+              </a>
+            </div>
+            
+            <div className="text-center md:text-left">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Connect</div>
+              <ul className="space-y-2 text-xs uppercase tracking-wider">
+                <li>
+                  <a href="https://instagram.com/madsphere.co" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    Instagram
+                  </a>
+                </li>
+                <li>
+                  <a href="https://linkedin.com/company/madsphere" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    LinkedIn
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:madsphere.info@gmail.com" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    Email Us
+                  </a>
+                </li>
+                <li>
+                  <a href="https://madsphere-web.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
+                    Website
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 text-[10px] uppercase tracking-wider text-zinc-600">
+            <div>© 2026 MadSphere. All rights reserved. Built with purpose.</div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

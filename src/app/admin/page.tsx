@@ -477,7 +477,7 @@ export default function AdminPage() {
                 </div>
 
                 <form onSubmit={handleGenerateTicket} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs text-zinc-500 uppercase tracking-wider block">Full Name *</label>
                       <input
@@ -504,7 +504,7 @@ export default function AdminPage() {
 
 
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs text-zinc-500 uppercase tracking-wider block">Age</label>
                       <input
@@ -585,7 +585,7 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs text-zinc-500 uppercase tracking-wider block">Event Date *</label>
                       <input
@@ -610,7 +610,7 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs text-zinc-500 uppercase tracking-wider block">Venue Name *</label>
                       <input
@@ -638,7 +638,7 @@ export default function AdminPage() {
                   {/* Accent Color picker */}
                   <div className="space-y-2">
                     <label className="text-xs text-zinc-500 uppercase tracking-wider block">Pass Accent Theme Color *</label>
-                    <div className="flex gap-4 p-4 rounded-2xl bg-zinc-950 border border-zinc-900">
+                    <div className="flex flex-wrap gap-4 p-4 rounded-2xl bg-zinc-950 border border-zinc-900">
                       {[
                         { id: 'gold', hex: '#cca43b', label: 'Gold' },
                         { id: 'pink', hex: '#ec4899', label: 'Pink' },
