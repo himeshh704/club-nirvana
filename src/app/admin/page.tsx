@@ -74,6 +74,18 @@ export default function AdminPage() {
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // White-label settings states
+  const [activeTab, setActiveTab] = useState<'create' | 'branding'>('create');
+  const [brandTitle, setBrandTitle] = useState('VANGUARD // NOTHING');
+  const [brandSubtitle, setBrandSubtitle] = useState('AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE');
+  const [brandDate, setBrandDate] = useState('To Be Disclosed');
+  const [brandTime, setBrandTime] = useState('9:00 PM - 4:00 AM');
+  const [brandVenue, setBrandVenue] = useState('Club Nirvana');
+  const [brandAddress, setBrandAddress] = useState('Jodhpur');
+  const [brandColor, setBrandColor] = useState('gold');
+  const [savingBranding, setSavingBranding] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   // Fetch metrics and recent scans
   const fetchMetrics = async () => {
     setLoadingStats(true);
@@ -118,6 +130,65 @@ export default function AdminPage() {
     }
   };
 
+  const fetchBranding = async () => {
+    try {
+      const res = await fetch('/api/event/settings');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.title) {
+          setBrandTitle(data.title);
+          setBrandSubtitle(data.subtitle);
+          setBrandDate(data.date);
+          setBrandTime(data.time);
+          setBrandVenue(data.venue);
+          setBrandAddress(data.address);
+          setBrandColor(data.accent_color);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading branding:', error);
+    }
+  };
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBranding(true);
+    setSaveSuccess(false);
+
+    try {
+      const res = await fetch('/api/event/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'admin8824'
+        },
+        body: JSON.stringify({
+          title: brandTitle,
+          subtitle: brandSubtitle,
+          date: brandDate,
+          time: brandTime,
+          venue: brandVenue,
+          address: brandAddress,
+          accent_color: brandColor
+        })
+      });
+
+      if (!res.ok) throw new Error('Branding update failed');
+      const data = await res.json();
+      if (data.success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        throw new Error(data.error || 'Server rejected updates');
+      }
+    } catch (error: any) {
+      console.error('Failed to save branding:', error);
+      alert(error.message || 'Saving failed. Please try again.');
+    } finally {
+      setSavingBranding(false);
+    }
+  };
+
   useEffect(() => {
     const auth = localStorage.getItem('staff_authenticated');
     const role = localStorage.getItem('staff_role');
@@ -129,6 +200,7 @@ export default function AdminPage() {
     
     setAuthorized(true);
     fetchMetrics();
+    fetchBranding();
     
     // Auto-refresh stats every 30 seconds
     const interval = setInterval(fetchMetrics, 30000);
@@ -138,23 +210,26 @@ export default function AdminPage() {
   // Form Submit Handler
   const handleGenerateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !email) {
-      alert('Please fill in Name, Phone, and Email.');
+    if (!name || !phone) {
+      alert('Please fill in Name and Phone.');
       return;
     }
 
     setGenerating(true);
     try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const emailValue = `${cleanPhone || Date.now()}@event.com`;
+
       const response = await fetch('/api/tickets/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           phone,
-          email,
+          email: emailValue,
           age,
           gender,
-          instagram,
+          instagram: '',
           ticket_type: ticketType
         })
       });
@@ -354,113 +429,253 @@ export default function AdminPage() {
 
         {/* Action Panel Grid */}
         <div className="grid gap-8 lg:grid-cols-12">
-          
-          {/* Quick Ticket Generator */}
+             {/* Left Form controls */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
-              <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
-                <PlusCircle className="h-5 w-5 text-[#cca43b]" />
-                <h3 className="text-lg font-bold tracking-wide">QUICK TICKET PASS GENERATOR</h3>
-              </div>
-
-              <form onSubmit={handleGenerateTicket} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="John Doe"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Phone Number *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="+91 99999 88888"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="john@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Instagram Handle (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="@johndoe"
-                      value={instagram}
-                      onChange={(e) => setInstagram(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Age</label>
-                    <input
-                      type="number"
-                      required
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Gender</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    >
-                      <option>Male</option>
-                      <option>Female</option>
-                      <option>Other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Entry Pass Type *</label>
-                    <select
-                      value={ticketType}
-                      onChange={(e) => setTicketType(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                    >
-                      <option value="Regular">Regular Entry</option>
-                      <option value="VIP">VIP Access</option>
-                      <option value="Couple">Couple Entry</option>
-                      <option value="Guest List">Guest List</option>
-                      <option value="Staff">Staff Pass</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={generating}
-                  className="mt-4 w-full rounded-xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:bg-[#ffe082] active:scale-95 disabled:opacity-50"
-                >
-                  {generating ? 'GENERATING SECURE QR...' : 'CREATE TICKET & SIGN QR'}
-                </button>
-              </form>
+            
+            {/* Tabs */}
+            <div className="flex gap-2 bg-black/40 border border-zinc-900 p-1 rounded-2xl">
+              <button
+                onClick={() => setActiveTab('create')}
+                className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'create'
+                    ? 'bg-[#cca43b] text-zinc-950 shadow-md'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                }`}
+              >
+                TICKET CREATOR
+              </button>
+              <button
+                onClick={() => setActiveTab('branding')}
+                className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
+                  activeTab === 'branding'
+                    ? 'bg-[#cca43b] text-zinc-950 shadow-md'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                }`}
+              >
+                BRANDING SETTINGS
+              </button>
             </div>
+
+            {activeTab === 'create' ? (
+              <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
+                <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
+                  <PlusCircle className="h-5 w-5 text-[#cca43b]" />
+                  <h3 className="text-lg font-bold tracking-wide">QUICK TICKET PASS GENERATOR</h3>
+                </div>
+
+                <form onSubmit={handleGenerateTicket} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Phone Number *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="+91 99999 88888"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                  </div>
+
+
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Age</label>
+                      <input
+                        type="number"
+                        required
+                        min="18"
+                        max="100"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Gender</label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Entry Pass Type *</label>
+                      <select
+                        value={ticketType}
+                        onChange={(e) => setTicketType(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      >
+                        <option value="Regular">Regular Entry</option>
+                        <option value="VIP">VIP Access</option>
+                        <option value="Couple">Couple Entry</option>
+                        <option value="Guest List">Guest List</option>
+                        <option value="Staff">Staff Pass</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={generating}
+                    className="mt-4 w-full rounded-xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:bg-[#ffe082] active:scale-95 disabled:opacity-50"
+                  >
+                    {generating ? 'GENERATING SECURE QR...' : 'CREATE TICKET & SIGN QR'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
+                <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
+                  <Compass className="h-5 w-5 text-[#cca43b]" />
+                  <h3 className="text-lg font-bold tracking-wide">WHITE-LABEL EVENT BRANDING</h3>
+                </div>
+
+                <form onSubmit={handleSaveBranding} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Event Title *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. VANGUARD // NOTHING"
+                      value={brandTitle}
+                      onChange={(e) => setBrandTitle(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Event Subtitle / Tagline</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE"
+                      value={brandSubtitle}
+                      onChange={(e) => setBrandSubtitle(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Event Date *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Saturday, Oct 31st"
+                        value={brandDate}
+                        onChange={(e) => setBrandDate(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Event Hours *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 9:00 PM - 4:00 AM"
+                        value={brandTime}
+                        onChange={(e) => setBrandTime(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Venue Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Club Nirvana"
+                        value={brandVenue}
+                        onChange={(e) => setBrandVenue(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">City / Address *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Jodhpur"
+                        value={brandAddress}
+                        onChange={(e) => setBrandAddress(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Accent Color picker */}
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Pass Accent Theme Color *</label>
+                    <div className="flex gap-4 p-4 rounded-2xl bg-zinc-950 border border-zinc-900">
+                      {[
+                        { id: 'gold', hex: '#cca43b', label: 'Gold' },
+                        { id: 'pink', hex: '#ec4899', label: 'Pink' },
+                        { id: 'purple', hex: '#a855f7', label: 'Purple' },
+                        { id: 'emerald', hex: '#10b981', label: 'Emerald' },
+                        { id: 'blue', hex: '#3b82f6', label: 'Blue' }
+                      ].map((color) => (
+                        <button
+                          key={color.id}
+                          type="button"
+                          onClick={() => setBrandColor(color.id)}
+                          className={`group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer ${
+                            brandColor === color.id 
+                              ? 'border-white scale-110 shadow-lg' 
+                              : 'border-zinc-800 hover:border-zinc-500 hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color.hex }}
+                          title={color.label}
+                        >
+                          {brandColor === color.id && (
+                            <Check className="h-4 w-4 text-black font-extrabold" />
+                          )}
+                          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[9px] text-zinc-500 uppercase hidden group-hover:block whitespace-nowrap">
+                            {color.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {saveSuccess && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 px-4 py-3 text-xs font-medium text-emerald-400"
+                    >
+                      ✓ Custom event settings saved successfully.
+                    </motion.div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={savingBranding}
+                    className="w-full rounded-xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:bg-[#ffe082] active:scale-95 disabled:opacity-50 cursor-pointer mt-4"
+                  >
+                    {savingBranding ? 'SAVING CONFIGURATIONS...' : 'SAVE EVENT BRANDING'}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
 
           {/* Generated Ticket Display Output */}
