@@ -3,13 +3,13 @@ import "./globals.css";
 import SWRegister from "@/components/swRegister";
 
 export const metadata: Metadata = {
-  title: "VANGUARD // Luxury Event Ticketing & Offline QR Check-In",
-  description: "Secure digital tickets and offline validation for premium concerts, club nights, and private events.",
+  title: "madsphere-qr-generator",
+  description: "MadSphere Secure Ticket Pass Engine and Offline validation gateway.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Vanguard Gate"
+    title: "MadSphere Pass"
   }
 };
 

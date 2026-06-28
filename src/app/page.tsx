@@ -272,9 +272,11 @@ function GuestPageContent() {
 
             {/* Logo and Type */}
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4 print:border-zinc-300">
-              <div>
-                <span className="text-lg font-bold tracking-widest text-white print:text-black">VANGUARD</span>
-                <span className={`ml-1 text-xs ${currentTheme.text} font-medium tracking-[0.2em]`}>{isVIP ? 'VIP ACCESS' : 'ECLIPSE'}</span>
+              <div className="flex flex-col gap-1.5 items-start">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-3.5 object-contain print:hidden" />
+                <span className="text-sm font-extrabold tracking-widest text-white print:block hidden">MADSPHERE</span>
+                <span className={`text-[9px] ${currentTheme.text} font-semibold tracking-[0.25em]`}>{isVIP ? 'VIP ACCESS' : 'SECURE PASS'}</span>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wider ${typeBadgeColor}`}>
                 {ticketData.ticketType.toUpperCase()}
@@ -410,9 +412,10 @@ function GuestPageContent() {
       {/* Header bar */}
       <header className="border-b border-white/5 bg-black/40 px-6 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Compass className={`h-6 w-6 ${currentTheme.text}`} />
-            <span className="font-bold tracking-widest text-white text-base">CLUB NIRVANA</span>
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-5 object-contain" />
+            <span className="text-[9px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">QR GENERATOR</span>
           </div>
           
           <div className="flex items-center gap-4">
@@ -487,8 +490,31 @@ function GuestPageContent() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-20 border-t border-white/5 py-8 text-center text-xs text-zinc-600">
-        &copy; {new Date().getFullYear()} Club Nirvana Experience. Cryptographically Signed Pass Engine.
+      <footer className="mt-20 border-t border-zinc-900 bg-black/80 py-12 text-zinc-500">
+        <div className="mx-auto max-w-4xl px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-4 object-contain brightness-75 hover:brightness-100 transition-all" />
+              <span className="text-[9px] tracking-[0.25em] font-semibold text-zinc-600 uppercase">QR ENGINE</span>
+            </div>
+            <p className="text-[10px] text-zinc-600">
+              © {new Date().getFullYear()} MadSphere. All rights reserved.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Help Desk</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Support</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Terms of Service</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Contact Us</a>
+          </div>
+
+          <div className="text-[10px] text-zinc-500 font-semibold tracking-widest uppercase">
+            CREATED BY <a href="#" className="text-white hover:underline transition-all">MADSPHERE</a>
+          </div>
+        </div>
       </footer>
     </div>
   );

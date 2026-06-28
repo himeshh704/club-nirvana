@@ -366,8 +366,9 @@ export default function AdminPage() {
       <header className="border-b border-zinc-900 bg-black/40 px-6 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <Compass className="h-6 w-6 text-[#cca43b]" />
-            <h1 className="text-xl font-bold tracking-widest">VANGUARD CONTROL</h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-5 object-contain" />
+            <span className="text-[10px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">CONTROL CENTRE</span>
           </div>
           <div className="flex gap-4">
             <a href="/" className="rounded-full border border-white/5 px-4 py-1.5 text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
@@ -828,6 +829,34 @@ export default function AdminPage() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-20 border-t border-zinc-900 bg-black/80 py-12 text-zinc-500">
+        <div className="mx-auto max-w-6xl px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-4 object-contain brightness-75 hover:brightness-100 transition-all" />
+              <span className="text-[9px] tracking-[0.25em] font-semibold text-zinc-600 uppercase">QR ENGINE</span>
+            </div>
+            <p className="text-[10px] text-zinc-600">
+              © {new Date().getFullYear()} MadSphere. All rights reserved.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Help Desk</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Support</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Terms of Service</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Privacy Policy</a>
+            <a href="#" className="hover:text-white transition-colors cursor-pointer">Contact Us</a>
+          </div>
+
+          <div className="text-[10px] text-zinc-500 font-semibold tracking-widest uppercase">
+            CREATED BY <a href="#" className="text-white hover:underline transition-all">MADSPHERE</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -437,10 +437,11 @@ export default function StaffDashboard() {
       <header className="border-b border-zinc-900 bg-black/40 px-6 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <Compass className="h-6 w-6 text-[#cca43b]" />
-            <div>
-              <h1 className="text-lg font-bold tracking-wider">GATE CONTROL</h1>
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-light">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-4 object-contain" />
+            <div className="border-l border-zinc-800 pl-3">
+              <span className="text-[10px] tracking-[0.25em] font-semibold text-zinc-500 uppercase block">TERMINAL</span>
+              <div className="flex items-center gap-1.5 text-[10px] text-zinc-600 font-light">
                 <span>{gate}</span>
                 <span>•</span>
                 <span>{device}</span>
