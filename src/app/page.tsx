@@ -59,7 +59,11 @@ function GuestPageContent() {
     time: "9:00 PM - 4:00 AM",
     venue: "Club Nirvana",
     address: "Jodhpur",
-    accent_color: "gold"
+    accent_color: "gold",
+    lineup_artist: "KAYLA (Berlin)",
+    lineup_genre: "DEEP NOIR / TECHNO",
+    support_artist: "AETHER SOUNDS",
+    support_genre: "MELODIC PROGRESSIVE"
   });
 
   // Fetch dynamic branding/event configurations
@@ -453,13 +457,13 @@ function GuestPageContent() {
             <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-6 mx-auto max-w-md">
               <div>
                 <span className="text-xs uppercase text-zinc-500 tracking-wider font-semibold">Lineup</span>
-                <span className="block mt-1 font-semibold text-zinc-200">KAYLA (Berlin)</span>
-                <span className="block text-sm text-zinc-400 font-light">DEEP NOIR / TECHNO</span>
+                <span className="block mt-1 font-semibold text-zinc-200">{eventSettings.lineup_artist || 'KAYLA (Berlin)'}</span>
+                <span className="block text-sm text-zinc-400 font-light">{eventSettings.lineup_genre || 'DEEP NOIR / TECHNO'}</span>
               </div>
               <div>
                 <span className="text-xs uppercase text-zinc-500 tracking-wider font-semibold">Support</span>
-                <span className="block mt-1 font-semibold text-zinc-200">AETHER SOUNDS</span>
-                <span className="block text-sm text-zinc-400 font-light">MELODIC PROGRESSIVE</span>
+                <span className="block mt-1 font-semibold text-zinc-200">{eventSettings.support_artist || 'AETHER SOUNDS'}</span>
+                <span className="block text-sm text-zinc-400 font-light">{eventSettings.support_genre || 'MELODIC PROGRESSIVE'}</span>
               </div>
             </div>
 

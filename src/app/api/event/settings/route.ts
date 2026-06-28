@@ -11,7 +11,11 @@ const DEFAULT_SETTINGS = {
   time: '9:00 PM - 4:00 AM',
   venue: 'Club Nirvana',
   address: 'Jodhpur',
-  accent_color: 'gold'
+  accent_color: 'gold',
+  lineup_artist: 'KAYLA (Berlin)',
+  lineup_genre: 'DEEP NOIR / TECHNO',
+  support_artist: 'AETHER SOUNDS',
+  support_genre: 'MELODIC PROGRESSIVE'
 };
 
 export async function GET() {
@@ -26,7 +30,10 @@ export async function GET() {
       return NextResponse.json(DEFAULT_SETTINGS);
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      ...DEFAULT_SETTINGS,
+      ...data
+    });
   } catch (err) {
     console.error('Error fetching event settings:', err);
     return NextResponse.json(DEFAULT_SETTINGS);
@@ -36,7 +43,10 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, subtitle, date, time, venue, address, accent_color } = body;
+    const { 
+      title, subtitle, date, time, venue, address, accent_color,
+      lineup_artist, lineup_genre, support_artist, support_genre 
+    } = body;
 
     if (!title || !venue || !accent_color) {
       return NextResponse.json({ error: 'Missing required branding fields' }, { status: 400 });
@@ -62,7 +72,11 @@ export async function POST(request: Request) {
         time: time || '9:00 PM - 4:00 AM',
         venue,
         address: address || 'Jodhpur',
-        accent_color
+        accent_color,
+        lineup_artist: lineup_artist || 'KAYLA (Berlin)',
+        lineup_genre: lineup_genre || 'DEEP NOIR / TECHNO',
+        support_artist: support_artist || 'AETHER SOUNDS',
+        support_genre: support_genre || 'MELODIC PROGRESSIVE'
       })
       .select('*')
       .single();

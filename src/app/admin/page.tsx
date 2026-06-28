@@ -86,6 +86,12 @@ export default function AdminPage() {
   const [savingBranding, setSavingBranding] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Lineup & Support States
+  const [brandLineupArtist, setBrandLineupArtist] = useState('KAYLA (Berlin)');
+  const [brandLineupGenre, setBrandLineupGenre] = useState('DEEP NOIR / TECHNO');
+  const [brandSupportArtist, setBrandSupportArtist] = useState('AETHER SOUNDS');
+  const [brandSupportGenre, setBrandSupportGenre] = useState('MELODIC PROGRESSIVE');
+
   // Fetch metrics and recent scans
   const fetchMetrics = async () => {
     setLoadingStats(true);
@@ -143,6 +149,10 @@ export default function AdminPage() {
           setBrandVenue(data.venue);
           setBrandAddress(data.address);
           setBrandColor(data.accent_color);
+          setBrandLineupArtist(data.lineup_artist || 'KAYLA (Berlin)');
+          setBrandLineupGenre(data.lineup_genre || 'DEEP NOIR / TECHNO');
+          setBrandSupportArtist(data.support_artist || 'AETHER SOUNDS');
+          setBrandSupportGenre(data.support_genre || 'MELODIC PROGRESSIVE');
         }
       }
     } catch (error) {
@@ -169,7 +179,11 @@ export default function AdminPage() {
           time: brandTime,
           venue: brandVenue,
           address: brandAddress,
-          accent_color: brandColor
+          accent_color: brandColor,
+          lineup_artist: brandLineupArtist,
+          lineup_genre: brandLineupGenre,
+          support_artist: brandSupportArtist,
+          support_genre: brandSupportGenre
         })
       });
 
@@ -666,6 +680,61 @@ export default function AdminPage() {
                           </span>
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Lineup & Support Settings */}
+                  <div className="border-t border-zinc-900 pt-4 mt-4 space-y-4">
+                    <h4 className="text-xs font-bold tracking-wider text-zinc-400 uppercase">Lineup & Artist Details</h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-zinc-500 uppercase tracking-wider block">Lineup Headliner *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. KAYLA (Berlin)"
+                          value={brandLineupArtist}
+                          onChange={(e) => setBrandLineupArtist(e.target.value)}
+                          className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-zinc-500 uppercase tracking-wider block">Headliner Genre *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. DEEP NOIR / TECHNO"
+                          value={brandLineupGenre}
+                          onChange={(e) => setBrandLineupGenre(e.target.value)}
+                          className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-zinc-500 uppercase tracking-wider block">Supporting Artist *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. AETHER SOUNDS"
+                          value={brandSupportArtist}
+                          onChange={(e) => setBrandSupportArtist(e.target.value)}
+                          className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-zinc-500 uppercase tracking-wider block">Supporting Genre *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. MELODIC PROGRESSIVE"
+                          value={brandSupportGenre}
+                          onChange={(e) => setBrandSupportGenre(e.target.value)}
+                          className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                        />
+                      </div>
                     </div>
                   </div>
 
