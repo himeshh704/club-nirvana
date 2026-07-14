@@ -89,3 +89,25 @@ CREATE POLICY "Allow service_role full access to tickets" ON public.tickets USIN
 CREATE POLICY "Allow service_role full access to checkins" ON public.checkins USING (true) WITH CHECK (true);
 CREATE POLICY "Allow service_role full access to staff" ON public.staff USING (true) WITH CHECK (true);
 CREATE POLICY "Allow service_role full access to sync_logs" ON public.sync_logs USING (true) WITH CHECK (true);
+
+-- Event Custom Branding Settings Table
+CREATE TABLE IF NOT EXISTS public.event_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL DEFAULT 'VANGUARD // NOTHING',
+    subtitle TEXT NOT NULL DEFAULT 'AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE',
+    date TEXT NOT NULL DEFAULT 'To Be Disclosed',
+    time TEXT NOT NULL DEFAULT '9:00 PM - 4:00 AM',
+    venue TEXT NOT NULL DEFAULT 'Club Nirvana',
+    address TEXT NOT NULL DEFAULT 'Jodhpur',
+    accent_color TEXT NOT NULL DEFAULT 'gold' CHECK (accent_color IN ('gold', 'pink', 'purple', 'emerald', 'blue')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed initial record if table is empty
+INSERT INTO public.event_settings (id, title, subtitle, date, time, venue, address, accent_color)
+VALUES ('00000000-0000-0000-0000-000000000001', 'VANGUARD // NOTHING', 'AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE', 'To Be Disclosed', '9:00 PM - 4:00 AM', 'Club Nirvana', 'Jodhpur', 'gold')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.event_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow service_role full access to event_settings" ON public.event_settings USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public read access to event_settings" ON public.event_settings FOR SELECT USING (true);

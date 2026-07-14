@@ -6,6 +6,9 @@ export interface QRTicketPayload {
   i: string; // ticketId
   n: string; // name
   t: string; // ticketType
+  tb?: string; // table number
+  gc?: number; // guest count
+  cv?: string; // cover credit amount
 }
 
 /**

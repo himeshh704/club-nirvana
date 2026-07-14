@@ -228,13 +228,17 @@ function GuestPageContent() {
 
   // RENDER TICKET VIEW
   if (ticketToken && ticketData) {
-    const isVIP = ticketData.ticketType === 'VIP';
-    const isCouple = ticketData.ticketType === 'Couple';
+    const isVIP = ticketData.ticketType.includes('VIP');
+    const isTable = ticketData.ticketType.includes('Table');
+    const isCouple = ticketData.ticketType.includes('Couple');
     
     let typeBadgeColor = 'border-zinc-500 text-zinc-300 bg-zinc-950/40';
     let typeBorderGlow = '';
     
-    if (isVIP) {
+    if (isTable) {
+      typeBadgeColor = 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/20 font-extrabold shadow-[0_0_15px_rgba(204,164,59,0.3)]';
+      typeBorderGlow = 'shadow-[0_0_25px_rgba(204,164,59,0.3)] border-[#cca43b]/60';
+    } else if (isVIP) {
       typeBadgeColor = currentTheme.badge;
       typeBorderGlow = currentTheme.borderPulse;
     } else if (isCouple) {
@@ -280,7 +284,7 @@ function GuestPageContent() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-3.5 object-contain print:hidden" />
                 <span className="text-sm font-extrabold tracking-widest text-white print:block hidden">MADSPHERE</span>
-                <span className={`text-[9px] ${currentTheme.text} font-semibold tracking-[0.25em]`}>{isVIP ? 'VIP ACCESS' : 'SECURE PASS'}</span>
+                <span className={`text-[9px] ${currentTheme.text} font-semibold tracking-[0.25em]`}>{isTable ? 'VIP TABLE PASS' : isVIP ? 'VIP ACCESS' : 'SECURE PASS'}</span>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wider ${typeBadgeColor}`}>
                 {ticketData.ticketType.toUpperCase()}
@@ -486,6 +490,175 @@ function GuestPageContent() {
                 <div className="text-left">
                   <h4 className="font-semibold text-zinc-200 text-sm">{eventSettings.venue}</h4>
                   <p className="text-xs text-zinc-500">{eventSettings.address}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* FULL PRICING & VIP TABLE BOOKING SECTION (Ankur Bishnoi Model) */}
+            <div className="mt-12 pt-10 border-t border-white/10 text-left space-y-8">
+              <div className="text-center space-y-2">
+                <span className="text-[10px] uppercase font-bold tracking-[0.3em] text-[#cca43b]">EXCLUSIVE ACCESS</span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white">ENTRY PHASES & VIP TABLES</h2>
+                <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                  Strictly limited capacity (80 passes • 32 table seats). Select your access tier below to reserve instantly.
+                </p>
+              </div>
+
+              {/* VIP Table Bookings Card */}
+              <div className="rounded-2xl border border-[#cca43b]/40 bg-gradient-to-b from-[#cca43b]/10 via-zinc-950 to-zinc-950 p-6 shadow-[0_0_30px_rgba(204,164,59,0.1)]">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-white/10 pb-4">
+                  <div>
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-[#ffe082] bg-[#cca43b]/20 px-2.5 py-1 rounded-full border border-[#cca43b]/40">
+                      BOTTLE SERVICE • VIP SEATING
+                    </span>
+                    <h3 className="text-xl font-bold text-white mt-2">VIP TABLE RESERVATIONS</h3>
+                  </div>
+                  <div className="text-xs text-zinc-400">
+                    Total Table Capacity: <span className="text-white font-semibold">32 People Max</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Small Table */}
+                  <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-5 flex flex-col justify-between hover:border-[#cca43b]/50 transition-all">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-bold text-white">SMALL TABLE</span>
+                        <span className="text-xs text-[#ffe082] bg-[#cca43b]/10 px-2 py-0.5 rounded border border-[#cca43b]/30">₹2,500 COVER</span>
+                      </div>
+                      <div className="mt-3">
+                        <span className="text-2xl font-extrabold text-white">₹7,999</span>
+                        <span className="text-xs text-zinc-400 ml-1">all inclusive</span>
+                      </div>
+                      <ul className="mt-3 space-y-1.5 text-xs text-zinc-300">
+                        <li>• Includes <span className="text-white font-semibold">₹2,500</span> redeemable cover</li>
+                        <li>• Dedicated VIP table & host service</li>
+                        <li>• Priority skip-the-line check-in</li>
+                      </ul>
+                    </div>
+                    <a
+                      href="https://wa.me/919999999999?text=Hi%20Club%20Nirvana%2C%20I%20would%20like%20to%20book%20a%20Small%20VIP%20Table%20(%E2%82%B97%2C999%20with%20%E2%82%B92%2C500%20Cover)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-5 w-full rounded-lg bg-[#cca43b] py-2.5 text-center text-xs font-bold text-black hover:bg-[#ffe082] transition-colors block"
+                    >
+                      RESERVE SMALL TABLE
+                    </a>
+                  </div>
+
+                  {/* Big Table */}
+                  <div className="rounded-xl bg-zinc-900/80 border border-[#cca43b]/40 p-5 flex flex-col justify-between hover:border-[#cca43b] transition-all">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-bold text-white">BIG TABLE</span>
+                        <span className="text-xs text-[#ffe082] bg-[#cca43b]/20 px-2 py-0.5 rounded border border-[#cca43b]/50 font-semibold">₹3,999 COVER</span>
+                      </div>
+                      <div className="mt-3">
+                        <span className="text-2xl font-extrabold text-[#ffe082]">₹11,999</span>
+                        <span className="text-xs text-zinc-400 ml-1">all inclusive</span>
+                      </div>
+                      <ul className="mt-3 space-y-1.5 text-xs text-zinc-300">
+                        <li>• Includes <span className="text-white font-semibold">₹3,999</span> redeemable cover</li>
+                        <li>• Premium stage-view VIP booth</li>
+                        <li>• Priority skip-the-line check-in</li>
+                      </ul>
+                    </div>
+                    <a
+                      href="https://wa.me/919999999999?text=Hi%20Club%20Nirvana%2C%20I%20would%20like%20to%20book%20a%20Big%20VIP%20Table%20(%E2%82%B911%2C999%20with%20%E2%82%B93%2C999%20Cover)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-5 w-full rounded-lg bg-gradient-to-r from-[#cca43b] to-amber-500 py-2.5 text-center text-xs font-bold text-black hover:opacity-90 transition-opacity block"
+                    >
+                      RESERVE BIG TABLE
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Entry Passes Breakdown (Phases 1, 2, On-Board) */}
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <h3 className="text-lg font-bold text-white">ENTRY PASS PHASES</h3>
+                  <span className="text-xs text-zinc-400">80 Passes Limit • 20 Guestlist Slots</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Phase 1 */}
+                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-zinc-850 pb-2">
+                      <span className="text-xs font-bold text-emerald-400">PHASE 1 (EARLY)</span>
+                      <span className="text-[10px] text-zinc-500">OPEN</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Stag Entry / +Cover</span>
+                        <span className="text-white font-medium">₹699 / ₹1,500</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Couple Entry / +Cover</span>
+                        <span className="text-white font-medium">₹599 / ₹2,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Girls (First 20 Free)</span>
+                        <span className="text-emerald-400 font-bold">FREE / ₹1,000</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phase 2 */}
+                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-zinc-850 pb-2">
+                      <span className="text-xs font-bold text-amber-400">PHASE 2</span>
+                      <span className="text-[10px] text-zinc-500">UPCOMING</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Stag Entry / +Cover</span>
+                        <span className="text-white font-medium">₹999 / ₹2,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Couple Entry / +Cover</span>
+                        <span className="text-white font-medium">₹999 / ₹2,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Girls (First 10 @299)</span>
+                        <span className="text-white font-medium">₹299 / ₹1,200</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phase 3 / Door */}
+                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3">
+                    <div className="flex justify-between items-center border-b border-zinc-850 pb-2">
+                      <span className="text-xs font-bold text-purple-400">ON-BOARD / DOOR</span>
+                      <span className="text-[10px] text-zinc-500">DOOR</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Stag Entry / +Cover</span>
+                        <span className="text-white font-medium">₹1,399 / ₹3,000</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Couple Entry / +Cover</span>
+                        <span className="text-white font-medium">₹1,200 / ₹2,500</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Girls Entry / +Cover</span>
+                        <span className="text-white font-medium">₹599 / ₹1,500</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 text-center">
+                  <a
+                    href="https://wa.me/919999999999?text=Hi%20Club%20Nirvana%2C%20I%20would%20like%20to%20book%20an%20Entry%20Pass"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 px-6 py-2.5 text-xs font-bold text-white transition-colors"
+                  >
+                    BOOK PASS VIA CONCIERGE
+                  </a>
                 </div>
               </div>
             </div>

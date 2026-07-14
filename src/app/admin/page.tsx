@@ -19,7 +19,15 @@ import {
   Search,
   MessageSquare,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Upload,
+  FileText,
+  Activity,
+  BarChart3,
+  Clock,
+  CheckCircle2,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
@@ -64,6 +72,11 @@ export default function AdminPage() {
   const [instagram, setInstagram] = useState('');
   const [ticketType, setTicketType] = useState('Regular');
   
+  // VIP Table state
+  const [tableTier, setTableTier] = useState('Small Table (₹7,999 | ₹2,500 Cover)');
+  const [tableNumber, setTableNumber] = useState('Table 1');
+  const [tableGuestCount, setTableGuestCount] = useState('6');
+  
   // Creation States
   const [generating, setGenerating] = useState(false);
   const [generatedTicket, setGeneratedTicket] = useState<{
@@ -78,7 +91,12 @@ export default function AdminPage() {
   const [copied, setCopied] = useState(false);
 
   // White-label settings states
-  const [activeTab, setActiveTab] = useState<'create' | 'branding'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'tables' | 'live' | 'bulk' | 'branding'>('create');
+  const [csvText, setCsvText] = useState('');
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkResults, setBulkResults] = useState<any[]>([]);
+  const [bulkSummary, setBulkSummary] = useState<any>(null);
+  const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(true);
   const [brandTitle, setBrandTitle] = useState('VANGUARD // NOTHING');
   const [brandSubtitle, setBrandSubtitle] = useState('AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE');
   const [brandDate, setBrandDate] = useState('To Be Disclosed');
@@ -463,6 +481,66 @@ export default function AdminPage() {
     }
   };
 
+  const handleGenerateTableTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !phone) {
+      alert('Please enter Primary Host Name and Phone Number.');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const cleanPhone = phone.replace(/\D/g, '');
+      const emailValue = `${cleanPhone || Date.now()}@event.com`;
+      const fullTableType = `${tableTier} [${tableNumber} - ${tableGuestCount} Guests]`;
+
+      const response = await fetch('/api/tickets/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          email: emailValue,
+          age,
+          gender,
+          instagram: '',
+          ticket_type: fullTableType
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create VIP Table pass');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const passLink = `${window.location.origin}/?ticket=${data.qrToken}`;
+        const qrUrl = await QRCode.toDataURL(data.qrToken, { margin: 2, errorCorrectionLevel: 'L' });
+
+        setGeneratedTicket({
+          ticketId: data.ticketId,
+          ticketType: fullTableType,
+          qrToken: data.qrToken,
+          guestName: name,
+          guestPhone: phone,
+          linkUrl: passLink,
+          qrDataUrl: qrUrl
+        });
+
+        setName('');
+        setPhone('');
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        fetchMetrics();
+      }
+    } catch (err: any) {
+      console.error('Error creating table pass:', err);
+      alert(err.message || 'Error creating VIP Table reservation');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const handleCopyLink = () => {
     if (!generatedTicket) return;
     navigator.clipboard.writeText(generatedTicket.linkUrl);
@@ -519,6 +597,112 @@ export default function AdminPage() {
     const message = `Hey *${generatedTicket.guestName}*! 🎟️\n\nHere is your entrance ticket pass for *${brandTitle}* at ${brandVenue}, ${brandAddress}.\n\nType: *${generatedTicket.ticketType}*\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
+  };
+
+  // Bulk CSV Helper Functions
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length === 0) return [];
+
+    const firstLine = lines[0].toLowerCase();
+    const hasHeader = firstLine.includes('name') || firstLine.includes('phone');
+    const dataLines = hasHeader ? lines.slice(1) : lines;
+
+    return dataLines.map(line => {
+      const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+      return {
+        name: parts[0] || '',
+        phone: parts[1] || '',
+        email: parts[2] || '',
+        age: parts[3] || '21',
+        gender: parts[4] || 'Male',
+        ticket_type: parts[5] || 'Regular'
+      };
+    }).filter(row => row.name && row.phone);
+  };
+
+  const handleBulkUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setCsvText(event.target.result as string);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadSampleCSV = () => {
+    const sample = 'Name,Phone,Email,Age,Gender,TicketType\nArjun Sharma,9876543210,arjun@example.com,24,Male,VIP\nPriya Patel,9811223344,priya@example.com,23,Female,Regular\nRohan Mehta,9711223355,rohan@example.com,26,Male,Couple';
+    const blob = new Blob([sample], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'vanguard_guest_import_sample.csv';
+    link.click();
+  };
+
+  const handleProcessBulk = async () => {
+    const parsedGuests = parseCSV(csvText);
+    if (parsedGuests.length === 0) {
+      alert('Please paste or upload valid CSV data with Name and Phone.');
+      return;
+    }
+
+    setBulkProcessing(true);
+    setBulkResults([]);
+    setBulkSummary(null);
+
+    try {
+      const res = await fetch('/api/tickets/bulk-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guests: parsedGuests })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Bulk generation failed');
+      }
+
+      const processedResults = (data.results || []).map((r: any) => ({
+        ...r,
+        fullLinkUrl: r.linkUrl ? `${window.location.origin}${r.linkUrl}` : ''
+      }));
+
+      setBulkResults(processedResults);
+      setBulkSummary({
+        total: data.totalProcessed,
+        created: data.created,
+        skipped: data.skipped,
+        errors: data.errors
+      });
+      fetchMetrics();
+    } catch (err: any) {
+      console.error('Bulk processing error:', err);
+      alert(err.message || 'Failed to process bulk import.');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleExportBulkResultsCSV = () => {
+    if (bulkResults.length === 0) return;
+    const headers = ['Guest Name', 'Phone Number', 'Ticket Type', 'Status', 'Message', 'Pass Direct URL'];
+    const rows = bulkResults.map(r => [
+      `"${r.name}"`,
+      `"${r.phone}"`,
+      `"${r.ticketType}"`,
+      `"${r.status}"`,
+      `"${r.message}"`,
+      `"${r.fullLinkUrl || ''}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `vanguard_bulk_passes_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
   };
 
   const percentCheckedIn = stats.totalGuests > 0 
@@ -667,36 +851,30 @@ export default function AdminPage() {
           <div className="lg:col-span-7 space-y-6">
             
             {/* Tabs */}
-            <div className="flex gap-2 bg-black/40 border border-zinc-900 p-1 rounded-2xl">
-              <button
-                onClick={() => {
-                  if (adminScannerOpen) toggleAdminScanner();
-                  setActiveTab('create');
-                }}
-                className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
-                  activeTab === 'create'
-                    ? `${activeTheme.bg} text-zinc-950 shadow-md`
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
-                }`}
-              >
-                TICKET CREATOR
-              </button>
-              <button
-                onClick={() => {
-                  if (adminScannerOpen) toggleAdminScanner();
-                  setActiveTab('branding');
-                }}
-                className={`flex-1 rounded-xl py-3 text-xs font-bold tracking-wider transition-all cursor-pointer ${
-                  activeTab === 'branding'
-                    ? `${activeTheme.bg} text-zinc-950 shadow-md`
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
-                }`}
-              >
-                BRANDING SETTINGS
-              </button>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-black/40 border border-zinc-900 p-1 rounded-2xl">
+              {(['create', 'tables', 'live', 'bulk', 'branding'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    if (adminScannerOpen) toggleAdminScanner();
+                    setActiveTab(tab);
+                  }}
+                  className={`rounded-xl py-2.5 text-[11px] font-bold tracking-wider transition-all cursor-pointer ${
+                    activeTab === tab
+                      ? `${activeTheme.bg} text-zinc-950 shadow-md`
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
+                  }`}
+                >
+                  {tab === 'create' && 'CREATE PASS'}
+                  {tab === 'tables' && 'VIP TABLES'}
+                  {tab === 'live' && 'LIVE GATE'}
+                  {tab === 'bulk' && 'BULK IMPORT'}
+                  {tab === 'branding' && 'BRANDING'}
+                </button>
+              ))}
             </div>
 
-            {activeTab === 'create' ? (
+            {activeTab === 'create' && (
               <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
                 <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
                   <PlusCircle className={`h-5 w-5 ${activeTheme.text}`} />
@@ -719,9 +897,9 @@ export default function AdminPage() {
                     <div className="space-y-1.5">
                       <label className="text-xs text-zinc-500 uppercase tracking-wider block">Phone Number *</label>
                       <input
-                        type="text"
+                        type="tel"
                         required
-                        placeholder="+91 99999 88888"
+                        placeholder="+91 98765 43210"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
@@ -729,7 +907,20 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Ticket Type / Tier</label>
+                    <select
+                      value={ticketType}
+                      onChange={(e) => setTicketType(e.target.value)}
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                    >
+                      <option value="Regular">Regular</option>
+                      <option value="Couple">Couple</option>
+                      <option value="VIP Table">VIP Table</option>
+                      <option value="Staff">Staff</option>
+                      <option value="Guest">Guest</option>
+                    </select>
+                  </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
@@ -756,20 +947,6 @@ export default function AdminPage() {
                         <option value="Other">Other</option>
                       </select>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-zinc-500 uppercase tracking-wider block">Entry Pass Type *</label>
-                      <select
-                        value={ticketType}
-                        onChange={(e) => setTicketType(e.target.value)}
-                        className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
-                      >
-                        <option value="Regular">Regular Entry</option>
-                        <option value="VIP">VIP Access</option>
-                        <option value="Couple">Couple Entry</option>
-                        <option value="Guest List">Guest List</option>
-                        <option value="Staff">Staff Pass</option>
-                      </select>
-                    </div>
                   </div>
 
                   <button
@@ -781,7 +958,100 @@ export default function AdminPage() {
                   </button>
                 </form>
               </div>
-            ) : (
+            )}
+
+            {activeTab === 'tables' && (
+              <div className="glass-panel rounded-3xl p-6 border border-amber-500/30 bg-gradient-to-b from-amber-950/20 to-zinc-950 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-amber-500/20 pb-4 mb-6">
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="h-5 w-5 text-amber-400 animate-pulse" />
+                    <div>
+                      <h3 className="text-lg font-extrabold tracking-wide text-amber-400">VIP TABLE RESERVATION & QR GENERATOR</h3>
+                      <p className="text-[11px] text-zinc-400">Separate booking desk with Table Number, Size & Guest Count</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    BOTTLE SERVICE & ESCORT
+                  </span>
+                </div>
+
+                <form onSubmit={handleGenerateTableTicket} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs text-amber-400/90 uppercase tracking-wider block font-semibold">Table Tier & Pricing *</label>
+                      <select
+                        value={tableTier}
+                        onChange={(e) => setTableTier(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
+                      >
+                        <option value="Small Table (₹7,999 | ₹2,500 Cover | 4-6 Guests)">🍾 Small Table — ₹7,999 (₹2,500 Cover Credit | 4 to 6 Guests)</option>
+                        <option value="Big Table (₹11,999 | ₹3,999 Cover | 8-10 Guests)">👑 Big Table — ₹11,999 (₹3,999 Cover Credit | 8 to 10 Guests)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Table Number / Location *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Table 1, VIP Booth 4"
+                        value={tableNumber}
+                        onChange={(e) => setTableNumber(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Total Guest Count *</label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        max="32"
+                        placeholder="e.g. 6 (Small) or 10 (Big)"
+                        value={tableGuestCount}
+                        onChange={(e) => setTableGuestCount(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Primary Host Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Ankur Bishnoi"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Primary Host WhatsApp / Phone *</label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="9876543210"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={generating}
+                    className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 py-4 text-sm font-extrabold tracking-wider text-black shadow-lg shadow-amber-500/20 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+                  >
+                    {generating ? 'RESERVING VIP TABLE & SIGNING QR...' : '🍾 GENERATE VIP TABLE PASS & QR'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {activeTab === 'branding' && (
               <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
                 <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
                   <Compass className={`h-5 w-5 ${activeTheme.text}`} />
@@ -969,6 +1239,162 @@ export default function AdminPage() {
                     {savingBranding ? 'SAVING CONFIGURATIONS...' : 'SAVE EVENT BRANDING'}
                   </button>
                 </form>
+              </div>
+            )}
+
+            {activeTab === 'live' && (
+              <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl space-y-6">
+                <div className="flex items-center justify-between border-b border-zinc-850 pb-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className={`h-5 w-5 ${activeTheme.text}`} />
+                    <h3 className="text-lg font-bold tracking-wide">LIVE GATE CAPACITY MONITOR</h3>
+                  </div>
+                  <button
+                    onClick={() => setSoundAlertsEnabled(!soundAlertsEnabled)}
+                    className="flex items-center gap-1.5 rounded-lg border border-zinc-800 px-3 py-1 text-xs text-zinc-400 hover:text-white"
+                  >
+                    {soundAlertsEnabled ? <Volume2 className="h-3.5 w-3.5 text-emerald-400" /> : <VolumeX className="h-3.5 w-3.5 text-zinc-500" />}
+                    <span>{soundAlertsEnabled ? 'SFX On' : 'SFX Off'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-zinc-850 bg-zinc-950/60 p-4">
+                    <span className="text-[10px] uppercase text-zinc-500">Gate Flow Rate</span>
+                    <p className="text-2xl font-black mt-1 text-white">{stats.checkedIn} / {stats.totalGuests}</p>
+                    <div className="w-full bg-zinc-900 h-2 rounded-full mt-2 overflow-hidden">
+                      <div className={`h-full ${activeTheme.bg}`} style={{ width: `${percentCheckedIn}%` }}></div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-850 bg-zinc-950/60 p-4 flex flex-col justify-between">
+                    <span className="text-[10px] uppercase text-zinc-500">Gate Terminal Status</span>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-xs font-semibold text-emerald-400">ONLINE & SYNCHRONIZED</span>
+                    </div>
+                    <a
+                      href="/staff/dashboard"
+                      target="_blank"
+                      className="mt-3 inline-block text-center rounded-lg bg-zinc-900 border border-zinc-800 py-1.5 text-xs font-bold text-zinc-300 hover:text-white"
+                    >
+                      Open Staff Scanner
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'bulk' && (
+              <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl space-y-5">
+                <div className="flex items-center justify-between border-b border-zinc-850 pb-4">
+                  <div className="flex items-center gap-2">
+                    <Upload className={`h-5 w-5 ${activeTheme.text}`} />
+                    <h3 className="text-lg font-bold tracking-wide">BATCH CSV GUEST PASS IMPORT</h3>
+                  </div>
+                  <button
+                    onClick={handleDownloadSampleCSV}
+                    className="text-xs text-[#cca43b] hover:underline font-semibold"
+                  >
+                    Download Sample CSV
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs text-zinc-400 block">
+                    Paste CSV data (Name, Phone, Email, Age, Gender, TicketType) or upload file:
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleBulkUploadFile}
+                    className="text-xs text-zinc-400 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+                  />
+                  <textarea
+                    rows={6}
+                    value={csvText}
+                    onChange={(e) => setCsvText(e.target.value)}
+                    placeholder="Arjun Sharma, 9876543210, arjun@example.com, 24, Male, VIP..."
+                    className="w-full rounded-xl bg-zinc-950 border border-zinc-900 p-3 text-xs font-mono text-zinc-200"
+                  />
+                </div>
+
+                <button
+                  onClick={handleProcessBulk}
+                  disabled={bulkProcessing || !csvText.trim()}
+                  className={`w-full rounded-xl ${activeTheme.bg} py-3 text-xs font-bold text-black hover:brightness-110 disabled:opacity-50 transition`}
+                >
+                  {bulkProcessing ? 'GENERATING PASSES IN BATCH...' : 'GENERATE PASSES'}
+                </button>
+
+                {bulkSummary && (
+                  <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white">Processed: {bulkSummary.total}</span>
+                      <span className="text-emerald-400">Created: {bulkSummary.created}</span>
+                      <span className="text-amber-400">Skipped: {bulkSummary.skipped}</span>
+                      <span className="text-red-400">Errors: {bulkSummary.errors}</span>
+                    </div>
+
+                    {bulkResults.length > 0 && (
+                      <>
+                        <div className="max-h-48 overflow-y-auto space-y-1.5 text-[11px]">
+                          {bulkResults.map((res, i) => (
+                            <div key={i} className="flex items-center justify-between rounded bg-zinc-900/60 px-3 py-2 border border-zinc-850">
+                              <div className="truncate pr-2">
+                                <span className="font-semibold text-white">{res.name}</span>
+                                <span className="text-zinc-500 ml-1">({res.phone})</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={`font-bold text-[10px] ${
+                                  res.status === 'CREATED' ? 'text-emerald-400' : res.status === 'SKIPPED' ? 'text-amber-400' : 'text-red-400'
+                                }`}>
+                                  {res.status}
+                                </span>
+                                {res.fullLinkUrl && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(res.fullLinkUrl);
+                                      alert(`Copied link for ${res.name}`);
+                                    }}
+                                    className="rounded bg-zinc-800 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-700 hover:text-white flex items-center gap-1 transition-all"
+                                    title="Copy Direct Pass Link"
+                                  >
+                                    <Copy className="h-3 w-3" /> Copy Link
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = bulkResults
+                                .filter(r => r.fullLinkUrl)
+                                .map(r => `${r.name} (${r.phone}): ${r.fullLinkUrl}`)
+                                .join('\n');
+                              navigator.clipboard.writeText(text);
+                              alert(`Copied ${bulkResults.filter(r => r.fullLinkUrl).length} guest pass links to clipboard!`);
+                            }}
+                            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 py-2 text-xs font-semibold text-white hover:bg-zinc-700 flex items-center justify-center gap-1.5"
+                          >
+                            <Copy className="h-3.5 w-3.5" /> Copy All Links
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleExportBulkResultsCSV}
+                            className="w-full rounded-lg bg-zinc-900 border border-zinc-800 py-2 text-xs font-semibold text-zinc-300 hover:text-white"
+                          >
+                            Export Results CSV
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

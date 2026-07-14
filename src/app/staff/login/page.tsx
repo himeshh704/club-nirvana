@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Compass, ShieldCheck, KeyRound, Sparkles } from 'lucide-react';
+import { ShieldCheck, KeyRound, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function StaffLoginPage() {
@@ -78,17 +78,15 @@ export default function StaffLoginPage() {
       >
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2">
-            <Compass className="h-8 w-8 text-[#cca43b]" />
-            <h1 className="text-3xl font-extrabold tracking-widest">VANGUARD</h1>
-          </div>
-          <span className="mt-2 text-xs font-semibold tracking-[0.3em] text-zinc-500 uppercase">GATE CONTROL PORTAL</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-8 object-contain mb-2" />
+          <span className="text-[10px] font-semibold tracking-[0.35em] text-zinc-500 uppercase">GATE CONTROL PORTAL</span>
         </div>
 
         {/* Login Form Panel */}
         <div className="glass-panel rounded-3xl p-8 border border-zinc-800 shadow-2xl">
           <div className="flex items-center gap-3 border-b border-zinc-800/80 pb-4 mb-6">
-            <div className="rounded-xl bg-amber-500/10 p-2 text-[#cca43b]">
+            <div className="rounded-xl bg-purple-500/10 p-2 text-purple-400">
               <KeyRound className="h-5 w-5" />
             </div>
             <div>
@@ -148,7 +146,7 @@ export default function StaffLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#cca43b] py-3.5 text-sm font-semibold tracking-wider text-black transition-all hover:bg-[#ffe082] active:scale-95 disabled:opacity-50"
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 py-3.5 text-sm font-bold tracking-wider text-white transition-all hover:bg-purple-500 active:scale-95 disabled:opacity-50"
             >
               {loading ? 'INITIALIZING...' : 'AUTHORIZE & ENTRY'}
             </button>
@@ -159,6 +157,11 @@ export default function StaffLoginPage() {
         <p className="mt-8 text-center text-xs text-zinc-600 max-w-xs mx-auto">
           Offline Mode notice: Gate terminal parameters will remain locally active during internet drops.
         </p>
+
+        {/* Footer */}
+        <footer className="mt-12 text-center text-[10px] text-zinc-600 tracking-widest uppercase font-semibold">
+          Created by <a href="#" className="text-zinc-500 hover:text-white transition-colors">MadSphere</a>
+        </footer>
       </motion.div>
     </div>
   );

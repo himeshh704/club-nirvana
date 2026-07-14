@@ -1,10 +1,10 @@
-const CACHE_NAME = 'event-scanner-v1';
+const CACHE_NAME = 'event-scanner-v2';
 const ASSETS_TO_CACHE = [
+  '/',
   '/staff/login',
   '/staff/dashboard',
   '/manifest.json',
-  // NextJS runtime assets will be added dynamically by browser cache,
-  // but we can cache these basic offline states.
+  '/madsphere_logo.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -41,7 +41,6 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || request.url.includes('supabase.co')) {
     event.respondWith(
       fetch(request).catch(() => {
-        // Return a mock offline JSON response for APIs if network fails
         return new Response(
           JSON.stringify({ error: 'offline', message: 'You are currently offline. Check-in saved locally.' }),
           { status: 503, headers: { 'Content-Type': 'application/json' } }
@@ -81,7 +80,7 @@ self.addEventListener('fetch', (event) => {
             if (cachedResponse) return cachedResponse;
             // Handle offline page fallback
             if (request.mode === 'navigate') {
-              return caches.match('/staff/dashboard') || caches.match('/staff/login');
+              return caches.match('/staff/dashboard') || caches.match('/staff/login') || caches.match('/');
             }
           });
         })

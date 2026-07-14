@@ -14,7 +14,9 @@ import {
   XCircle,
   AlertTriangle,
   FolderDown,
-  UserCheck
+  UserCheck,
+  Download,
+  Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -59,6 +61,30 @@ export default function StaffDashboard() {
   const [scannerActive, setScannerActive] = useState(false);
   const [resultState, setResultState] = useState<ScanResultState>('idle');
   const [resultDetails, setResultDetails] = useState<ScanDetails | null>(null);
+
+  // PWA install state
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setShowInstallBanner(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -470,6 +496,27 @@ export default function StaffDashboard() {
         </div>
       </header>
 
+      {/* PWA Install Banner */}
+      {showInstallBanner && (
+        <div className="bg-[#cca43b]/15 border-b border-[#cca43b]/30 px-6 py-3">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <Smartphone className="h-5 w-5 text-[#cca43b] shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-white">Install Offline Gate Scanner App</p>
+                <p className="text-[11px] text-zinc-400">Add to Home Screen for instant launch & 100% offline entrance check-in.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleInstallPWA}
+              className="shrink-0 rounded-lg bg-[#cca43b] px-3.5 py-1.5 text-xs font-bold text-black hover:bg-[#cca43b]/90 transition"
+            >
+              Install App
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Container */}
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-4 flex flex-col justify-between">
         
@@ -596,9 +643,15 @@ export default function StaffDashboard() {
                   <span className="text-xs text-white/40 uppercase tracking-wider block">GUEST INFORMATION</span>
                   <span className="text-2xl font-bold mt-1 block text-white">{resultDetails.name}</span>
                   
-                  <span className="inline-block mt-3 rounded-full bg-white/10 px-4 py-1 text-xs font-semibold text-white">
-                    {resultDetails.ticketType.toUpperCase()}
-                  </span>
+                  {resultDetails.ticketType.includes('Table') ? (
+                    <div className="mt-4 rounded-2xl bg-gradient-to-r from-[#cca43b] to-amber-600 p-3 text-black font-extrabold text-sm shadow-lg border border-yellow-300">
+                      🍾 VIP TABLE ESCORT REQUIRED ({resultDetails.ticketType})
+                    </div>
+                  ) : (
+                    <span className="inline-block mt-3 rounded-full bg-white/10 px-4 py-1 text-xs font-semibold text-white">
+                      {resultDetails.ticketType.toUpperCase()}
+                    </span>
+                  )}
 
                   <div className="mt-6 border-t border-white/5 pt-4 text-xs space-y-2 text-white/70">
                     {resultState === 'valid' && (
