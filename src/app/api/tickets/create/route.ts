@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
-
+import { verifyAdminRequest, extractVIPTableName, checkTableReservationConflict } from '@/lib/ticketValidation';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: Request) {
   try {
+    const authError = verifyAdminRequest(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { name, phone, email, age, gender, instagram, ticket_type } = body;
 
@@ -26,24 +29,14 @@ export async function POST(request: Request) {
     }
 
     // Check table reservation uniqueness if this pass is for a VIP Table
-    const extractedTable = body.table_number ? String(body.table_number).trim() : (ticket_type.match(/\[(Table\s*[^-\]]+)[\s-]/i)?.[1]?.trim());
-    if (extractedTable && extractedTable.toLowerCase().includes('table')) {
-      try {
-        const { data: existingTableTickets } = await supabaseAdmin
-          .from('tickets')
-          .select('id, ticket_type, users(name, phone)')
-          .ilike('ticket_type', `%${extractedTable}%`)
-          .limit(1);
-
-        if (existingTableTickets && existingTableTickets.length > 0) {
-          const assignedHost = (existingTableTickets[0] as any)?.users?.name || 'an existing VIP Host';
-          return NextResponse.json(
-            { error: `Table Reservation Conflict: "${extractedTable}" is already signed and assigned to ${assignedHost}. Cannot issue another pass for "${extractedTable}".` },
-            { status: 409 }
-          );
-        }
-      } catch (tableCheckErr) {
-        console.warn('Could not verify table uniqueness against database:', tableCheckErr);
+    const extractedTable = extractVIPTableName(ticket_type, body.table_number);
+    if (extractedTable) {
+      const { conflict, assignedHost } = await checkTableReservationConflict(supabaseAdmin, extractedTable);
+      if (conflict) {
+        return NextResponse.json(
+          { error: `Table Reservation Conflict: "${extractedTable}" is already signed and assigned to ${assignedHost}. Cannot issue another pass for "${extractedTable}".` },
+          { status: 409 }
+        );
       }
     }
 

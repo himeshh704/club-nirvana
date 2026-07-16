@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyQRToken } from '@/lib/qrCrypto';
+import { verifyAdminRequest } from '@/lib/ticketValidation';
 
 export async function POST(request: Request) {
   try {
+    const authError = verifyAdminRequest(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { qrToken, gate, scannerDevice } = body;
 

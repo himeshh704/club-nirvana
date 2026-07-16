@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 
 export default function StaffLoginPage() {
   const router = useRouter();
+  const [username, setUsername] = useState('');
   const [accessCode, setAccessCode] = useState('');
   const [gate, setGate] = useState('Gate A');
   const [deviceName, setDeviceName] = useState('');
@@ -18,14 +19,14 @@ export default function StaffLoginPage() {
     const auth = localStorage.getItem('staff_authenticated');
     const role = localStorage.getItem('staff_role');
     if (auth === 'true') {
-      if (role === 'Admin') {
+      if (role === 'Admin' || role === 'Manager') {
         router.push('/admin');
       } else {
         router.push('/staff/dashboard');
       }
+      return;
     }
 
-    // Default device name based on browser/screen
     if (typeof window !== 'undefined') {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       setDeviceName(isMobile ? 'Mobile Scanner Terminal' : 'Desktop Terminal');
@@ -37,30 +38,58 @@ export default function StaffLoginPage() {
     setError('');
     setLoading(true);
 
-    if (!accessCode) {
-      setError('Please enter your gate access code.');
+    const userClean = username.trim().toLowerCase();
+    const passClean = accessCode.trim();
+
+    if (!passClean) {
+      setError('Please enter your password / access code.');
       setLoading(false);
       return;
     }
 
-    // Standard logins:
-    // admin8824 -> role: Admin
-    // gate123 -> role: Security
-    if (accessCode === 'admin8824' || accessCode === 'gate123') {
-      const isAdmin = accessCode === 'admin8824';
-      // Store auth state locally for offline PWA operation
-      localStorage.setItem('staff_authenticated', 'true');
-      localStorage.setItem('staff_role', isAdmin ? 'Admin' : 'Security');
-      localStorage.setItem('staff_gate', gate);
-      localStorage.setItem('staff_device', deviceName || 'Generic Gate Scanner');
+    let targetRole = '';
+    let targetUser = '';
 
-      if (isAdmin) {
-        router.push('/admin');
-      } else {
-        router.push('/staff/dashboard');
-      }
+    if ((userClean === 'superadmin' || userClean === 'admin' || userClean === '') && (passClean === 'admin8824' || passClean === 'admin123')) {
+      targetRole = 'Admin';
+      targetUser = 'Super Admin';
+    } else if ((userClean === 'ankur bishnoi' || userClean === 'ankur' || userClean === '' || passClean === 'ankur1234') && passClean === 'ankur1234') {
+      targetRole = 'Manager';
+      targetUser = 'Ankur Bishnoi';
+    } else if ((userClean === 'angad bishnoi' || userClean === 'angad' || userClean === '' || passClean === 'angad1234') && passClean === 'angad1234') {
+      targetRole = 'Manager';
+      targetUser = 'Angad Bishnoi';
+    } else if ((userClean === 'staff' || userClean === 'gate' || userClean === '' || passClean === 'staf1234' || passClean === 'gate123') && (passClean === 'staf1234' || passClean === 'gate123')) {
+      targetRole = 'Security';
+      targetUser = 'Gate Staff';
+    } else if (passClean === 'admin8824') {
+      targetRole = 'Admin';
+      targetUser = 'Super Admin';
+    } else if (passClean === 'ankur1234') {
+      targetRole = 'Manager';
+      targetUser = 'Ankur Bishnoi';
+    } else if (passClean === 'angad1234') {
+      targetRole = 'Manager';
+      targetUser = 'Angad Bishnoi';
+    } else if (passClean === 'staf1234' || passClean === 'gate123') {
+      targetRole = 'Security';
+      targetUser = 'Gate Staff';
     } else {
-      setError('Invalid Access Code. Please check with the coordinator.');
+      setError('Invalid Username or Password. Please verify credentials with coordinator.');
+      setLoading(false);
+      return;
+    }
+
+    localStorage.setItem('staff_authenticated', 'true');
+    localStorage.setItem('staff_role', targetRole);
+    localStorage.setItem('staff_user', targetUser);
+    localStorage.setItem('staff_gate', gate);
+    localStorage.setItem('staff_device', deviceName || 'Generic Gate Scanner');
+
+    if (targetRole === 'Admin' || targetRole === 'Manager') {
+      router.push('/admin');
+    } else {
+      router.push('/staff/dashboard');
     }
     setLoading(false);
   };
@@ -102,12 +131,26 @@ export default function StaffLoginPage() {
               </div>
             )}
 
-            {/* Access Code Input */}
+            {/* Username / ID Input */}
             <div className="space-y-1.5">
-              <label htmlFor="code" className="text-xs uppercase text-zinc-500 font-semibold tracking-wider block">Access Code</label>
+              <label htmlFor="user" className="text-xs uppercase text-zinc-500 font-semibold tracking-wider block">Username / Role ID (Optional if Code Unique)</label>
+              <input
+                id="user"
+                type="text"
+                placeholder="e.g. ankur bishnoi, angad bishnoi, staff"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3.5 text-sm text-white placeholder-zinc-700 gold-border-glow"
+              />
+            </div>
+
+            {/* Access Code / Password Input */}
+            <div className="space-y-1.5">
+              <label htmlFor="code" className="text-xs uppercase text-zinc-500 font-semibold tracking-wider block">Password / Access Code *</label>
               <input
                 id="code"
                 type="password"
+                required
                 placeholder="••••••••"
                 value={accessCode}
                 onChange={(e) => setAccessCode(e.target.value)}

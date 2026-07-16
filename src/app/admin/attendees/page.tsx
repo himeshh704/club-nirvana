@@ -101,7 +101,8 @@ export default function AttendeeDirectory() {
     if (filterType === 'All') return matchesSearch;
     if (filterType === 'Checked In') return matchesSearch && item.is_used;
     if (filterType === 'Remaining') return matchesSearch && !item.is_used;
-    if (filterType === 'VIP') return matchesSearch && item.ticket_type === 'VIP';
+    if (filterType === 'VIP') return matchesSearch && (item.ticket_type === 'VIP' || item.ticket_type === 'VVIP' || item.ticket_type.toLowerCase().includes('vip'));
+    if (filterType === 'VIP Tables') return matchesSearch && item.ticket_type.toLowerCase().includes('table');
     if (filterType === 'Blacklisted') return matchesSearch && item.is_banned;
     return matchesSearch;
   });
@@ -280,7 +281,7 @@ export default function AttendeeDirectory() {
 
           {/* Filter Categories */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            {['All', 'Checked In', 'Remaining', 'VIP', 'Blacklisted'].map((type) => (
+            {['All', 'Checked In', 'Remaining', 'VIP', 'VIP Tables', 'Blacklisted'].map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
@@ -340,10 +341,11 @@ export default function AttendeeDirectory() {
                       {/* Ticket Type */}
                       <td className="py-4 px-4">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border font-medium ${
-                          attendee.ticket_type === 'VIP' ? 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/5' : 
+                          attendee.ticket_type.toLowerCase().includes('table') ? 'border-amber-500/60 text-amber-300 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.25)] font-bold' :
+                          attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' ? 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/5' : 
                           attendee.ticket_type === 'Couple' ? 'border-pink-500/30 text-pink-400' : 'border-zinc-800 text-zinc-400'
                         }`}>
-                          {attendee.ticket_type === 'VIP' && <Sparkles className="h-3 w-3 text-[#cca43b]" />}
+                          {(attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' || attendee.ticket_type.toLowerCase().includes('table')) && <Sparkles className="h-3 w-3 text-[#cca43b]" />}
                           {attendee.ticket_type}
                         </span>
                       </td>

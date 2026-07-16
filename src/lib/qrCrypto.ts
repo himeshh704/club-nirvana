@@ -1,6 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.QR_JWT_SECRET || 'fallback-secret-key-do-not-use-in-production';
+function getJWTSecret(): string {
+  const secret = process.env.QR_JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL SECURITY ERROR: QR_JWT_SECRET environment variable is not defined in production. Refusing to sign or verify tokens with fallback secret.');
+  }
+  return secret || 'fallback-secret-key-do-not-use-in-production';
+}
 
 export interface QRTicketPayload {
   i: string; // ticketId
@@ -16,7 +22,7 @@ export interface QRTicketPayload {
  */
 export function signQRToken(payload: QRTicketPayload): string {
   try {
-    return jwt.sign(payload, JWT_SECRET);
+    return jwt.sign(payload, getJWTSecret());
   } catch (error) {
     console.error('Error signing QR Token:', error);
     throw new Error('Failed to sign QR code.');
@@ -29,7 +35,7 @@ export function signQRToken(payload: QRTicketPayload): string {
  */
 export function verifyQRToken(token: string): QRTicketPayload {
   try {
-    return jwt.verify(token, JWT_SECRET) as QRTicketPayload;
+    return jwt.verify(token, getJWTSecret()) as QRTicketPayload;
   } catch (error) {
     console.error('Error verifying QR Token:', error);
     throw new Error('Invalid or tampered QR code token.');

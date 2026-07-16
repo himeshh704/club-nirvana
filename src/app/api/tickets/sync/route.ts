@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyAdminRequest } from '@/lib/ticketValidation';
 
 interface SyncCheckinItem {
   id: number; // Client-side IndexedDB local ID
@@ -12,11 +13,21 @@ interface SyncCheckinItem {
 
 export async function POST(request: Request) {
   try {
+    const authError = verifyAdminRequest(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const { checkins, device } = body as { checkins: SyncCheckinItem[]; device: string };
 
     if (!checkins || !Array.isArray(checkins) || checkins.length === 0) {
       return NextResponse.json({ success: true, syncedIds: [], message: 'No records to sync' });
+    }
+
+    if (checkins.length > 500) {
+      return NextResponse.json(
+        { error: 'Maximum sync batch size is 500 check-ins per payload' },
+        { status: 400 }
+      );
     }
 
     const deviceName = device || 'Offline Gate Terminal';
@@ -26,6 +37,7 @@ export async function POST(request: Request) {
 
     for (const item of checkins) {
       const { ticket_id, scanner_device, gate, timestamp, id } = item;
+      const validTimestamp = timestamp && !isNaN(Date.parse(timestamp)) ? timestamp : new Date().toISOString();
 
       // 1. Fetch current database state for this ticket
       const { data: ticket, error: fetchError } = await supabaseAdmin
@@ -43,7 +55,7 @@ export async function POST(request: Request) {
             ticket_type: 'VIP (Offline Synced)',
             qr_token: `OFFLINE_${ticket_id}`,
             is_used: true,
-            used_at: timestamp,
+            used_at: validTimestamp,
             is_banned: false
           });
 
@@ -52,7 +64,7 @@ export async function POST(request: Request) {
             gate: gate || 'Offline Gate',
             scanner_device: scanner_device || deviceName,
             online_or_offline: 'offline',
-            timestamp
+            timestamp: validTimestamp
           });
           syncedIds.push(id);
           successfulSyncs++;
@@ -71,7 +83,7 @@ export async function POST(request: Request) {
           gate: gate || 'Denied Gate',
           scanner_device: scanner_device || deviceName,
           online_or_offline: 'offline',
-          timestamp
+          timestamp: validTimestamp
         });
         syncedIds.push(id);
         continue;
@@ -88,35 +100,48 @@ export async function POST(request: Request) {
         await supabaseAdmin.from('checkins').insert({
           ticket_id,
           gate,
-          scanner_device,
+          scanner_device: scanner_device || deviceName,
           online_or_offline: 'offline',
-          timestamp
+          timestamp: validTimestamp
         });
       } else {
-        // Ticket is valid and unused. Perform standard check-in update.
-        const { error: updateError } = await supabaseAdmin
+        // Ticket is valid and unused. Perform atomic check-in update (`eq('is_used', false)`).
+        const { data: updatedRows, error: updateError } = await supabaseAdmin
           .from('tickets')
           .update({
             is_used: true,
-            used_at: timestamp
+            used_at: validTimestamp
           })
-          .eq('id', ticket_id);
+          .eq('id', ticket_id)
+          .eq('is_used', false)
+          .select('id');
 
         if (updateError) {
           console.error(`Sync error updating ticket state for ${ticket_id}:`, updateError);
           continue;
+        } else if (!updatedRows || updatedRows.length === 0) {
+          // Race condition occurred between our select and our update!
+          conflictsResolved++;
+          console.warn(`Sync conflict (race condition): Ticket ${ticket_id} marked used concurrently.`);
+          await supabaseAdmin.from('checkins').insert({
+            ticket_id,
+            gate,
+            scanner_device: scanner_device || deviceName,
+            online_or_offline: 'offline',
+            timestamp: validTimestamp
+          });
+        } else {
+          // Log the successful check-in record
+          await supabaseAdmin.from('checkins').insert({
+            ticket_id,
+            gate,
+            scanner_device: scanner_device || deviceName,
+            online_or_offline: 'offline',
+            timestamp: validTimestamp
+          });
+
+          successfulSyncs++;
         }
-
-        // Log the check-in record
-        await supabaseAdmin.from('checkins').insert({
-          ticket_id,
-          gate,
-          scanner_device,
-          online_or_offline: 'offline',
-          timestamp
-        });
-
-        successfulSyncs++;
       }
 
       syncedIds.push(id);

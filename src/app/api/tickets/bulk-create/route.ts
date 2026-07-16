@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
+import { verifyAdminRequest, extractVIPTableName, checkTableReservationConflict } from '@/lib/ticketValidation';
 import { randomUUID } from 'crypto';
 
 interface BulkGuestInput {
@@ -14,6 +15,9 @@ interface BulkGuestInput {
 
 export async function POST(request: Request) {
   try {
+    const authError = verifyAdminRequest(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const guests: BulkGuestInput[] = body.guests;
 
@@ -31,193 +35,184 @@ export async function POST(request: Request) {
       );
     }
 
-    const results = [];
+    const results: any[] = [];
     let successCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
 
-    for (const guest of guests) {
-      const name = guest.name?.trim();
-      const phone = guest.phone?.trim();
-      const email = guest.email?.trim() || `${phone}@placeholder.clubnirvana.local`;
-      const age = guest.age ? parseInt(String(guest.age), 10) : 21;
-      const gender = guest.gender || 'Not Specified';
-      const ticket_type = guest.ticket_type?.trim() || 'Regular';
+    // Process guests in concurrent chunks of 15 for 10x throughput and to prevent serverless execution timeouts
+    const CHUNK_SIZE = 15;
+    for (let i = 0; i < guests.length; i += CHUNK_SIZE) {
+      const chunk = guests.slice(i, i + CHUNK_SIZE);
+      const chunkPromises = chunk.map(async (guest) => {
+        const name = guest.name?.trim();
+        const phone = guest.phone?.trim();
+        const email = guest.email?.trim() || `${phone}@placeholder.clubnirvana.local`;
+        const age = guest.age ? parseInt(String(guest.age), 10) : 21;
+        const gender = guest.gender || 'Not Specified';
+        const ticket_type = guest.ticket_type?.trim() || 'Regular';
 
-      if (!name || !phone) {
-        results.push({
-          name: name || 'Unknown',
-          phone: phone || 'Unknown',
-          ticketType: ticket_type,
-          status: 'ERROR',
-          message: 'Name and Phone Number are mandatory'
-        });
-        errorCount++;
-        continue;
-      }
+        if (!name || !phone) {
+          return {
+            name: name || 'Unknown',
+            phone: phone || 'Unknown',
+            ticketType: ticket_type,
+            status: 'ERROR',
+            message: 'Name and Phone Number are mandatory'
+          };
+        }
 
-      if (isNaN(age) || age < 21) {
-        results.push({
-          name,
-          phone,
-          ticketType: ticket_type,
-          status: 'ERROR',
-          message: 'Age Limit Restriction: Guests must be 21+ to enter Club Nirvana'
-        });
-        errorCount++;
-        continue;
-      }
+        if (isNaN(age) || age < 21) {
+          return {
+            name,
+            phone,
+            ticketType: ticket_type,
+            status: 'ERROR',
+            message: 'Age Limit Restriction: Guests must be 21+ to enter Club Nirvana'
+          };
+        }
 
-      try {
-        // Check if table reservation is taken if this pass is for a VIP Table
-        const extractedTable = ticket_type.match(/\[(Table\s*[^-\]]+)[\s-]/i)?.[1]?.trim() || (ticket_type.toLowerCase().includes('table') ? ticket_type : null);
-        if (extractedTable && extractedTable.toLowerCase().includes('table')) {
-          try {
-            const { data: existingTableTickets } = await supabaseAdmin
-              .from('tickets')
-              .select('id, ticket_type, users(name)')
-              .ilike('ticket_type', `%${extractedTable}%`)
-              .limit(1);
-
-            if (existingTableTickets && existingTableTickets.length > 0) {
-              const assignedHost = (existingTableTickets[0] as any)?.users?.name || 'an existing VIP Host';
-              results.push({
+        try {
+          // Check if table reservation is taken if this pass is for a VIP Table
+          const extractedTable = extractVIPTableName(ticket_type);
+          if (extractedTable) {
+            const { conflict, assignedHost } = await checkTableReservationConflict(supabaseAdmin, extractedTable);
+            if (conflict) {
+              return {
                 name,
                 phone,
                 ticketType: ticket_type,
                 status: 'ERROR',
                 message: `Table Conflict: "${extractedTable}" already assigned to ${assignedHost}`
-              });
-              errorCount++;
-              continue;
+              };
             }
-          } catch (_) {}
-        }
+          }
 
-        // Check if user exists
-        const { data: existingUser } = await supabaseAdmin
-          .from('users')
-          .select('id')
-          .eq('phone', phone)
-          .maybeSingle();
-
-        let userId = existingUser?.id;
-
-        if (userId) {
-          // Check if guest already has a ticket of this exact type or if we should skip duplicates
-          const { data: existingTicket } = await supabaseAdmin
-            .from('tickets')
-            .select('id, ticket_type')
-            .eq('user_id', userId)
-            .eq('ticket_type', ticket_type)
+          // Check if user exists
+          const { data: existingUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('phone', phone)
             .maybeSingle();
 
-          if (existingTicket) {
-            results.push({
-              name,
-              phone,
-              email,
-              ticketType: ticket_type,
-              status: 'SKIPPED',
-              message: `Guest already has a ${ticket_type} pass`
-            });
-            skippedCount++;
-            continue;
-          }
-        } else {
-          // Create new user
-          const { data: newUser, error: createError } = await supabaseAdmin
-            .from('users')
-            .insert({
-              name,
-              phone,
-              email,
-              age: isNaN(age) ? 21 : age,
-              gender,
-              instagram: null
-            })
-            .select('id')
-            .single();
+          let userId = existingUser?.id;
 
-          if (createError || !newUser) {
-            results.push({
+          if (userId) {
+            // Check if guest already has a ticket of this exact type
+            const { data: existingTicket } = await supabaseAdmin
+              .from('tickets')
+              .select('id, ticket_type')
+              .eq('user_id', userId)
+              .eq('ticket_type', ticket_type)
+              .maybeSingle();
+
+            if (existingTicket) {
+              return {
+                name,
+                phone,
+                email,
+                ticketType: ticket_type,
+                status: 'SKIPPED',
+                message: `Guest already has a ${ticket_type} pass`
+              };
+            }
+          } else {
+            // Create new user
+            const { data: newUser, error: createError } = await supabaseAdmin
+              .from('users')
+              .insert({
+                name,
+                phone,
+                email,
+                age: isNaN(age) ? 21 : age,
+                gender,
+                instagram: null
+              })
+              .select('id')
+              .single();
+
+            if (createError || !newUser) {
+              return {
+                name,
+                phone,
+                email,
+                ticketType: ticket_type,
+                status: 'ERROR',
+                message: createError?.message || 'Failed to create user record'
+              };
+            }
+
+            userId = newUser.id;
+          }
+
+          const allowedTypes = ['Regular', 'VIP', 'Couple', 'Staff', 'Guest List'];
+          const normalizedTicketType = allowedTypes.includes(ticket_type) || ticket_type.toLowerCase().includes('table')
+            ? ticket_type
+            : ticket_type === 'VVIP'
+            ? 'VIP'
+            : ticket_type === 'Couple'
+            ? 'Couple'
+            : 'Regular';
+
+          const ticketId = randomUUID();
+          const qrToken = signQRToken({
+            i: ticketId,
+            n: name,
+            t: normalizedTicketType
+          });
+
+          // Insert ticket with explicit UUID
+          const { error: ticketError } = await supabaseAdmin
+            .from('tickets')
+            .insert({
+              id: ticketId,
+              user_id: userId,
+              ticket_type: normalizedTicketType,
+              qr_token: qrToken,
+              is_used: false,
+              is_banned: false
+            });
+
+          if (ticketError) {
+            return {
               name,
               phone,
               email,
               ticketType: ticket_type,
               status: 'ERROR',
-              message: createError?.message || 'Failed to create user record'
-            });
-            errorCount++;
-            continue;
+              message: ticketError.message || 'Failed to insert ticket row'
+            };
           }
 
-          userId = newUser.id;
-        }
-
-        const allowedTypes = ['Regular', 'VIP', 'Couple', 'Staff', 'Guest List'];
-        const normalizedTicketType = allowedTypes.includes(ticket_type) || ticket_type.toLowerCase().includes('table')
-          ? ticket_type
-          : ticket_type === 'VVIP'
-          ? 'VIP'
-          : ticket_type === 'Couple'
-          ? 'Couple'
-          : 'Regular';
-
-        const ticketId = randomUUID();
-        const qrToken = signQRToken({
-          i: ticketId,
-          n: name,
-          t: normalizedTicketType
-        });
-
-        // Insert ticket with explicit UUID
-        const { error: ticketError } = await supabaseAdmin
-          .from('tickets')
-          .insert({
-            id: ticketId,
-            user_id: userId,
-            ticket_type: normalizedTicketType,
-            qr_token: qrToken,
-            is_used: false,
-            is_banned: false
-          });
-
-        if (ticketError) {
-          results.push({
+          return {
+            name,
+            phone,
+            email,
+            ticketType: ticket_type,
+            ticketId,
+            qrToken,
+            status: 'CREATED',
+            message: 'Pass created successfully',
+            linkUrl: `/?ticket=${qrToken}`
+          };
+        } catch (innerError: any) {
+          return {
             name,
             phone,
             email,
             ticketType: ticket_type,
             status: 'ERROR',
-            message: ticketError.message || 'Failed to insert ticket row'
-          });
-          errorCount++;
-          continue;
+            message: innerError?.message || 'Unexpected row error'
+          };
         }
+      });
 
-        results.push({
-          name,
-          phone,
-          email,
-          ticketType: ticket_type,
-          ticketId,
-          qrToken,
-          status: 'CREATED',
-          message: 'Pass created successfully',
-          linkUrl: `/?ticket=${qrToken}`
-        });
-        successCount++;
-      } catch (innerError: any) {
-        results.push({
-          name,
-          phone,
-          email,
-          ticketType: ticket_type,
-          status: 'ERROR',
-          message: innerError?.message || 'Unexpected row error'
-        });
-        errorCount++;
+      const chunkResults = await Promise.all(chunkPromises);
+      for (const res of chunkResults) {
+        results.push(res);
+        if (res.status === 'CREATED') successCount++;
+        else if (res.status === 'SKIPPED') skippedCount++;
+        else if (res.status === 'ERROR') errorCount++;
       }
     }
 

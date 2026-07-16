@@ -53,6 +53,8 @@ interface RecentCheckin {
 export default function AdminPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
+  const [userRole, setUserRole] = useState('Admin');
+  const [loggedUser, setLoggedUser] = useState('Super Admin');
 
   // Stats
   const [stats, setStats] = useState<DashboardStats>({
@@ -72,6 +74,8 @@ export default function AdminPage() {
   const [gender, setGender] = useState('Male');
   const [instagram, setInstagram] = useState('');
   const [ticketType, setTicketType] = useState('Regular');
+  const [paymentStatus, setPaymentStatus] = useState('Complimentary');
+  const [collectedBy, setCollectedBy] = useState('Super Admin');
   
   // VIP Table state
   const [tableTier, setTableTier] = useState('Small Table (₹7,999 | ₹2,500 Cover)');
@@ -431,14 +435,26 @@ export default function AdminPage() {
 
   useEffect(() => {
     const auth = localStorage.getItem('staff_authenticated');
-    const role = localStorage.getItem('staff_role');
+    const role = localStorage.getItem('staff_role') || 'Admin';
+    const user = localStorage.getItem('staff_user') || 'Super Admin';
     
-    if (auth !== 'true' || role !== 'Admin') {
+    if (auth !== 'true') {
       router.push('/staff/login');
+      return;
+    }
+
+    if (role === 'Security') {
+      router.push('/staff/dashboard');
       return;
     }
     
     setAuthorized(true);
+    setUserRole(role);
+    setLoggedUser(user);
+    if (user === 'Ankur Bishnoi' || user === 'Angad Bishnoi') {
+      setCollectedBy(user);
+    }
+
     fetchMetrics();
     fetchBranding();
     
@@ -476,7 +492,9 @@ export default function AdminPage() {
           age,
           gender,
           instagram: '',
-          ticket_type: ticketType
+          ticket_type: ticketType,
+          payment_method: paymentStatus,
+          collected_by: collectedBy
         })
       });
 
@@ -554,7 +572,9 @@ export default function AdminPage() {
           gender,
           instagram: '',
           ticket_type: fullTableType,
-          table_number: tableNumber.trim()
+          table_number: tableNumber.trim(),
+          payment_method: paymentStatus,
+          collected_by: collectedBy
         })
       });
 
@@ -826,9 +846,14 @@ export default function AdminPage() {
             <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-5 object-contain" />
             <span className="text-[10px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">CONTROL CENTRE</span>
           </div>
-          <div className="flex flex-wrap justify-center gap-2 md:gap-4">
+          <div className="flex flex-wrap justify-center gap-2 md:gap-4 items-center">
+            <span className="text-xs text-zinc-400 font-semibold px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800">
+              👤 {loggedUser} ({userRole})
+            </span>
             <a href="/" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
-            <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
+            {userRole === 'Admin' && (
+              <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
+            )}
           </div>
         </div>
       </header>
@@ -836,64 +861,65 @@ export default function AdminPage() {
       {/* Main Grid */}
       <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
         
-        {/* Statistics Panels */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          
-          <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
-            <div className="flex justify-between items-center text-zinc-500">
-              <span className="text-xs uppercase tracking-wider font-semibold">Total Guests</span>
-              <Ticket className={`h-4 w-4 ${activeTheme.text}`} />
+        {/* Statistics Panels (Admin Only) */}
+        {userRole === 'Admin' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
+              <div className="flex justify-between items-center text-zinc-500">
+                <span className="text-xs uppercase tracking-wider font-semibold">Total Guests</span>
+                <Ticket className={`h-4 w-4 ${activeTheme.text}`} />
+              </div>
+              {loadingStats ? (
+                <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
+              ) : (
+                <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.totalGuests}</h2>
+              )}
+              <p className="text-[10px] text-zinc-500 mt-2">Total registered passes</p>
             </div>
-            {loadingStats ? (
-              <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
-            ) : (
-              <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.totalGuests}</h2>
-            )}
-            <p className="text-[10px] text-zinc-500 mt-2">Total registered passes</p>
-          </div>
 
-          <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
-            <div className="flex justify-between items-center text-zinc-500">
-              <span className="text-xs uppercase tracking-wider font-semibold">Checked In</span>
-              <UserCheck className={`h-4 w-4 ${activeTheme.text}`} />
+            <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
+              <div className="flex justify-between items-center text-zinc-500">
+                <span className="text-xs uppercase tracking-wider font-semibold">Checked In</span>
+                <UserCheck className={`h-4 w-4 ${activeTheme.text}`} />
+              </div>
+              {loadingStats ? (
+                <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
+              ) : (
+                <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.checkedIn}</h2>
+              )}
+              <div className="mt-2 w-full bg-zinc-950 rounded-full h-1.5">
+                <div className={`${activeTheme.bg} h-1.5 rounded-full`} style={{ width: `${percentCheckedIn}%` }}></div>
+              </div>
+              <p className="text-[10px] text-zinc-500 mt-1">{percentCheckedIn}% Complete</p>
             </div>
-            {loadingStats ? (
-              <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
-            ) : (
-              <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.checkedIn}</h2>
-            )}
-            <div className="mt-2 w-full bg-zinc-950 rounded-full h-1.5">
-              <div className={`${activeTheme.bg} h-1.5 rounded-full`} style={{ width: `${percentCheckedIn}%` }}></div>
-            </div>
-            <p className="text-[10px] text-zinc-500 mt-1">{percentCheckedIn}% Complete</p>
-          </div>
 
-          <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
-            <div className="flex justify-between items-center text-zinc-500">
-              <span className="text-xs uppercase tracking-wider font-semibold">Remaining</span>
-              <Users className="h-4 w-4 text-zinc-400" />
+            <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
+              <div className="flex justify-between items-center text-zinc-500">
+                <span className="text-xs uppercase tracking-wider font-semibold">Remaining</span>
+                <Users className="h-4 w-4 text-zinc-400" />
+              </div>
+              {loadingStats ? (
+                <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
+              ) : (
+                <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.remaining}</h2>
+              )}
+              <p className="text-[10px] text-zinc-500 mt-2">Expected gate arrivals</p>
             </div>
-            {loadingStats ? (
-              <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
-            ) : (
-              <h2 className="text-3xl font-extrabold mt-1 tracking-wide">{stats.remaining}</h2>
-            )}
-            <p className="text-[10px] text-zinc-500 mt-2">Expected gate arrivals</p>
-          </div>
 
-          <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
-            <div className="flex justify-between items-center text-zinc-500">
-              <span className="text-xs uppercase tracking-wider font-semibold">VIP Members</span>
-              <Sparkles className={`h-4 w-4 ${activeTheme.text}`} />
+            <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
+              <div className="flex justify-between items-center text-zinc-500">
+                <span className="text-xs uppercase tracking-wider font-semibold">VIP Members</span>
+                <Sparkles className={`h-4 w-4 ${activeTheme.text}`} />
+              </div>
+              {loadingStats ? (
+                <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
+              ) : (
+                <h2 className={`text-3xl font-extrabold mt-1 tracking-wide ${activeTheme.text}`}>{stats.vipGuests}</h2>
+              )}
+              <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>VIP lounge credentials</p>
             </div>
-            {loadingStats ? (
-              <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
-            ) : (
-              <h2 className={`text-3xl font-extrabold mt-1 tracking-wide ${activeTheme.text}`}>{stats.vipGuests}</h2>
-            )}
-            <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>VIP lounge credentials</p>
           </div>
-        </div>
+        )}
 
         {/* Action Panel Grid */}
         <div className="grid gap-8 lg:grid-cols-12">
@@ -901,15 +927,15 @@ export default function AdminPage() {
           <div className="lg:col-span-7 space-y-6">
             
             {/* Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-black/40 border border-zinc-900 p-1 rounded-2xl">
-              {(['create', 'tables', 'live', 'bulk', 'branding'] as const).map((tab) => (
+            <div className="flex flex-wrap gap-1.5 bg-black/40 border border-zinc-900 p-1.5 rounded-2xl">
+              {(userRole === 'Manager' ? ['create', 'tables', 'live'] as const : ['create', 'tables', 'live', 'bulk', 'branding'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
                     if (adminScannerOpen) toggleAdminScanner();
-                    setActiveTab(tab);
+                    setActiveTab(tab as any);
                   }}
-                  className={`rounded-xl py-2.5 text-[11px] font-bold tracking-wider transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[100px] rounded-xl py-2.5 text-[11px] font-bold tracking-wider transition-all cursor-pointer ${
                     activeTab === tab
                       ? `${activeTheme.bg} text-zinc-950 shadow-md`
                       : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
@@ -995,6 +1021,35 @@ export default function AdminPage() {
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                         <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-zinc-850">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Payment Status / Type *</label>
+                      <select
+                        value={paymentStatus}
+                        onChange={(e) => setPaymentStatus(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm text-white font-medium focus:border-amber-400"
+                      >
+                        <option value="Complimentary">Complimentary / Free Pass</option>
+                        <option value="Cash">Paid — Cash Collected</option>
+                        <option value="UPI">Paid — UPI / Online</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Collected By *</label>
+                      <select
+                        value={collectedBy}
+                        onChange={(e) => setCollectedBy(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm text-white font-medium focus:border-amber-400"
+                      >
+                        <option value="Super Admin">Super Admin</option>
+                        <option value="Ankur Bishnoi">Ankur Bishnoi</option>
+                        <option value="Angad Bishnoi">Angad Bishnoi</option>
+                        <option value="Promoter / Other">Promoter / Coordinator</option>
                       </select>
                     </div>
                   </div>
@@ -1101,6 +1156,35 @@ export default function AdminPage() {
                         onChange={(e) => setAge(e.target.value)}
                         className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
                       />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-amber-500/20">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Payment Status / Type *</label>
+                      <select
+                        value={paymentStatus}
+                        onChange={(e) => setPaymentStatus(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
+                      >
+                        <option value="Complimentary">Complimentary / Free Pass</option>
+                        <option value="Cash">Paid — Cash Collected</option>
+                        <option value="UPI">Paid — UPI / Online</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Collected By *</label>
+                      <select
+                        value={collectedBy}
+                        onChange={(e) => setCollectedBy(e.target.value)}
+                        className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
+                      >
+                        <option value="Super Admin">Super Admin</option>
+                        <option value="Ankur Bishnoi">Ankur Bishnoi</option>
+                        <option value="Angad Bishnoi">Angad Bishnoi</option>
+                        <option value="Promoter / Other">Promoter / Coordinator</option>
+                      </select>
                     </div>
                   </div>
 
