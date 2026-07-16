@@ -41,6 +41,7 @@ interface DashboardStats {
   checkedIn: number;
   remaining: number;
   vipGuests: number;
+  vipPax?: number;
 }
 
 interface RevenueSummary {
@@ -170,18 +171,15 @@ export default function AdminPage() {
 
         const total = list.length;
         const checked = list.filter((t: any) => t.is_used).length;
-        const vip = list.filter((t: any) => 
-          t.ticket_type === 'VIP' || 
-          t.ticket_type === 'VVIP' || 
-          t.ticket_type?.toLowerCase().includes('vip') || 
-          t.ticket_type?.toLowerCase().includes('table')
-        ).length;
+        const vip = list.filter((t: any) => /vip|table/i.test(t.ticket_type || '')).length;
+        const vipPax = list.reduce((sum: number, t: any) => sum + (/vip|table/i.test(t.ticket_type || '') ? +(t.ticket_type?.match(/-\s*(\d+)\s*Guests?/i)?.[1] || 1) : 0), 0);
         
         setStats({
           totalGuests: total,
           checkedIn: checked,
           remaining: Math.max(0, total - checked),
-          vipGuests: vip
+          vipGuests: vip,
+          vipPax
         });
 
         const revSummary: RevenueSummary = {
@@ -991,9 +989,12 @@ export default function AdminPage() {
               {loadingStats ? (
                 <div className="h-8 w-16 animate-pulse bg-zinc-800 rounded mt-2"></div>
               ) : (
-                <h2 className={`text-3xl font-extrabold mt-1 tracking-wide ${activeTheme.text}`}>{stats.vipGuests}</h2>
+                <h2 className={`text-3xl font-extrabold mt-1 tracking-wide ${activeTheme.text}`}>
+                  {stats.vipPax ?? stats.vipGuests}
+                  <span className="text-xs font-normal text-zinc-500 ml-2">({stats.vipGuests} passes)</span>
+                </h2>
               )}
-              <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>VIP & Table passes</p>
+              <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>Total expected VIP & Table guests (Pax)</p>
             </div>
           </div>
         )}

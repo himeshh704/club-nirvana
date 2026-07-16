@@ -375,6 +375,13 @@ export default function AttendeeDirectory() {
           </div>
         </div>
 
+        {filterType.includes('VIP') && (
+          <div className="mb-4 rounded-2xl bg-[#cca43b]/10 border border-[#cca43b]/30 px-5 py-3 text-xs text-[#ffe082] font-bold flex items-center justify-between">
+            <span>🍾 {filterType} Passes Booked: {filteredAttendees.length}</span>
+            <span>Total Expected Headcount (Pax): {filteredAttendees.reduce((sum, a) => sum + (a.ticket_type?.match(/-\s*(\d+)\s*Guests?/i)?.[1] ? +a.ticket_type.match(/-\s*(\d+)\s*Guests?/i)![1] : 1), 0)}</span>
+          </div>
+        )}
+
         {/* Directory Listing Table */}
         <div className="glass-panel rounded-3xl border border-zinc-900 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
