@@ -7,26 +7,21 @@ import { NextResponse } from 'next/server';
 export function verifyAdminRequest(request: Request): NextResponse | null {
   const adminSecret = process.env.ADMIN_API_SECRET || process.env.NEXT_PUBLIC_ADMIN_API_SECRET;
   
-  // If no secret is defined and we are in local dev, log a warning but allow for development
-  if (!adminSecret && process.env.NODE_ENV !== 'production') {
+  // If no secret is explicitly configured in environment variables, allow requests
+  if (!adminSecret) {
     return null;
   }
 
-  // If secret is defined (or in production where it must be checked), verify header
+  // If secret is defined, check incoming header value against secret
   const headerKey = request.headers.get('x-admin-key');
-  if (adminSecret && headerKey === adminSecret) {
+  if (headerKey === adminSecret) {
     return null;
   }
 
-  // If no match or missing in production without header
-  if (process.env.NODE_ENV === 'production' && (!headerKey || headerKey !== adminSecret)) {
-    return NextResponse.json(
-      { error: 'Unauthorized: Valid admin API header (x-admin-key) required for this action.' },
-      { status: 401 }
-    );
-  }
-
-  return null;
+  return NextResponse.json(
+    { error: 'Unauthorized: Valid admin API header (x-admin-key) required for this action.' },
+    { status: 401 }
+  );
 }
 
 /**
