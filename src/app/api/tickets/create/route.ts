@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     if (authError) return authError;
 
     const body = await request.json();
-    const { name, phone, email, age, gender, instagram, ticket_type } = body;
+    const { name, phone, email, age, gender, instagram, ticket_type, payment_method, collected_by } = body;
 
     // Validation
     if (!name || !phone || !email || !age || !gender || !ticket_type) {
@@ -81,7 +81,9 @@ export async function POST(request: Request) {
             ticket_type,
             qr_token: `TEMP_${ticketId}`,
             is_used: false,
-            is_banned: false
+            is_banned: false,
+            payment_method: payment_method || 'Complimentary',
+            collected_by: collected_by || 'Super Admin'
           });
       }
     } catch (dbErr) {
@@ -99,7 +101,11 @@ export async function POST(request: Request) {
     try {
       const { data: updatedRows } = await supabaseAdmin
         .from('tickets')
-        .update({ qr_token: qrToken })
+        .update({ 
+          qr_token: qrToken,
+          payment_method: payment_method || 'Complimentary',
+          collected_by: collected_by || 'Super Admin'
+        })
         .eq('id', ticketId)
         .select('id');
 
@@ -110,7 +116,9 @@ export async function POST(request: Request) {
           ticket_type,
           qr_token: qrToken,
           is_used: false,
-          is_banned: false
+          is_banned: false,
+          payment_method: payment_method || 'Complimentary',
+          collected_by: collected_by || 'Super Admin'
         });
       }
     } catch (e) {

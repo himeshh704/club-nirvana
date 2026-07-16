@@ -170,7 +170,9 @@ export async function POST(request: Request) {
               ticket_type: normalizedTicketType,
               qr_token: qrToken,
               is_used: false,
-              is_banned: false
+              is_banned: false,
+              payment_method: 'Complimentary',
+              collected_by: 'Super Admin'
             });
 
           if (ticketError) {
