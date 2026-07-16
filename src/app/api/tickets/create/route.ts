@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
 
+import { randomUUID } from 'crypto';
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -15,7 +17,37 @@ export async function POST(request: Request) {
       );
     }
 
-    let ticketId = `TICKET_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const parsedAge = parseInt(String(age), 10);
+    if (isNaN(parsedAge) || parsedAge < 21) {
+      return NextResponse.json(
+        { error: 'Age Limit Restriction: Guests must be 21 years of age or older to enter Club Nirvana.' },
+        { status: 400 }
+      );
+    }
+
+    // Check table reservation uniqueness if this pass is for a VIP Table
+    const extractedTable = body.table_number ? String(body.table_number).trim() : (ticket_type.match(/\[(Table\s*[^-\]]+)[\s-]/i)?.[1]?.trim());
+    if (extractedTable && extractedTable.toLowerCase().includes('table')) {
+      try {
+        const { data: existingTableTickets } = await supabaseAdmin
+          .from('tickets')
+          .select('id, ticket_type, users(name, phone)')
+          .ilike('ticket_type', `%${extractedTable}%`)
+          .limit(1);
+
+        if (existingTableTickets && existingTableTickets.length > 0) {
+          const assignedHost = (existingTableTickets[0] as any)?.users?.name || 'an existing VIP Host';
+          return NextResponse.json(
+            { error: `Table Reservation Conflict: "${extractedTable}" is already signed and assigned to ${assignedHost}. Cannot issue another pass for "${extractedTable}".` },
+            { status: 409 }
+          );
+        }
+      } catch (tableCheckErr) {
+        console.warn('Could not verify table uniqueness against database:', tableCheckErr);
+      }
+    }
+
+    const ticketId = randomUUID();
 
     try {
       // 1. Create or retrieve the user in Supabase (optional best-effort sync)
@@ -47,22 +79,17 @@ export async function POST(request: Request) {
       }
 
       if (userId) {
-        // Insert ticket into DB if user was found/created
-        const { data: tempTicket } = await supabaseAdmin
+        // Insert ticket into DB if user was found/created with explicit UUID
+        await supabaseAdmin
           .from('tickets')
           .insert({
+            id: ticketId,
             user_id: userId,
             ticket_type,
-            qr_token: `TEMP_${Date.now()}`,
+            qr_token: `TEMP_${ticketId}`,
             is_used: false,
             is_banned: false
-          })
-          .select('id')
-          .single();
-
-        if (tempTicket) {
-          ticketId = tempTicket.id;
-        }
+          });
       }
     } catch (dbErr) {
       console.warn('Database sync warning during ticket creation, continuing with cryptographic generation:', dbErr);
@@ -75,12 +102,24 @@ export async function POST(request: Request) {
       t: ticket_type
     });
 
-    // Best-effort update of token in database
+    // Best-effort update or upsert of token in database so foreign keys work reliably
     try {
-      await supabaseAdmin
+      const { data: updatedRows } = await supabaseAdmin
         .from('tickets')
         .update({ qr_token: qrToken })
-        .eq('id', ticketId);
+        .eq('id', ticketId)
+        .select('id');
+
+      if (!updatedRows || updatedRows.length === 0) {
+        // Insert fallback record with UUID if user link failed
+        await supabaseAdmin.from('tickets').insert({
+          id: ticketId,
+          ticket_type,
+          qr_token: qrToken,
+          is_used: false,
+          is_banned: false
+        });
+      }
     } catch (e) {
       // Ignore DB update error
     }

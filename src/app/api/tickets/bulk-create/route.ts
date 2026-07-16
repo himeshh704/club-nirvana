@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
+import { randomUUID } from 'crypto';
 
 interface BulkGuestInput {
   name: string;
@@ -18,46 +19,82 @@ export async function POST(request: Request) {
 
     if (!Array.isArray(guests) || guests.length === 0) {
       return NextResponse.json(
-        { error: 'Invalid payload: guests must be a non-empty array' },
+        { error: 'Invalid input: guests must be a non-empty array' },
         { status: 400 }
       );
     }
 
-    if (guests.length > 200) {
+    if (guests.length > 500) {
       return NextResponse.json(
-        { error: 'Bulk limit exceeded: Maximum 200 guests per batch request' },
+        { error: 'Maximum batch size is 500 guests per upload' },
         { status: 400 }
       );
     }
 
     const results = [];
-    let createdCount = 0;
-    let skippedCount = 0;
+    let successCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
 
     for (const guest of guests) {
       const name = guest.name?.trim();
       const phone = guest.phone?.trim();
-      const email = guest.email?.trim() || 'guest@clubnirvana.com';
-      const age = parseInt(String(guest.age || 21), 10) || 21;
-      const gender = guest.gender?.trim() || 'Unspecified';
+      const email = guest.email?.trim() || `${phone}@placeholder.clubnirvana.local`;
+      const age = guest.age ? parseInt(String(guest.age), 10) : 21;
+      const gender = guest.gender || 'Not Specified';
       const ticket_type = guest.ticket_type?.trim() || 'Regular';
 
       if (!name || !phone) {
         results.push({
           name: name || 'Unknown',
-          phone: phone || '',
-          email,
+          phone: phone || 'Unknown',
           ticketType: ticket_type,
           status: 'ERROR',
-          message: 'Missing Name or Phone'
+          message: 'Name and Phone Number are mandatory'
+        });
+        errorCount++;
+        continue;
+      }
+
+      if (isNaN(age) || age < 21) {
+        results.push({
+          name,
+          phone,
+          ticketType: ticket_type,
+          status: 'ERROR',
+          message: 'Age Limit Restriction: Guests must be 21+ to enter Club Nirvana'
         });
         errorCount++;
         continue;
       }
 
       try {
-        // Check for existing user by phone
+        // Check if table reservation is taken if this pass is for a VIP Table
+        const extractedTable = ticket_type.match(/\[(Table\s*[^-\]]+)[\s-]/i)?.[1]?.trim() || (ticket_type.toLowerCase().includes('table') ? ticket_type : null);
+        if (extractedTable && extractedTable.toLowerCase().includes('table')) {
+          try {
+            const { data: existingTableTickets } = await supabaseAdmin
+              .from('tickets')
+              .select('id, ticket_type, users(name)')
+              .ilike('ticket_type', `%${extractedTable}%`)
+              .limit(1);
+
+            if (existingTableTickets && existingTableTickets.length > 0) {
+              const assignedHost = (existingTableTickets[0] as any)?.users?.name || 'an existing VIP Host';
+              results.push({
+                name,
+                phone,
+                ticketType: ticket_type,
+                status: 'ERROR',
+                message: `Table Conflict: "${extractedTable}" already assigned to ${assignedHost}`
+              });
+              errorCount++;
+              continue;
+            }
+          } catch (_) {}
+        }
+
+        // Check if user exists
         const { data: existingUser } = await supabaseAdmin
           .from('users')
           .select('id')
@@ -67,11 +104,12 @@ export async function POST(request: Request) {
         let userId = existingUser?.id;
 
         if (userId) {
-          // Check existing ticket
+          // Check if guest already has a ticket of this exact type or if we should skip duplicates
           const { data: existingTicket } = await supabaseAdmin
             .from('tickets')
-            .select('id, qr_token, ticket_type')
+            .select('id, ticket_type')
             .eq('user_id', userId)
+            .eq('ticket_type', ticket_type)
             .maybeSingle();
 
           if (existingTicket) {
@@ -79,26 +117,24 @@ export async function POST(request: Request) {
               name,
               phone,
               email,
-              ticketType: existingTicket.ticket_type,
-              ticketId: existingTicket.id,
-              qrToken: existingTicket.qr_token,
+              ticketType: ticket_type,
               status: 'SKIPPED',
-              message: 'Guest already has an active pass',
-              linkUrl: `/?ticket=${existingTicket.qr_token}`
+              message: `Guest already has a ${ticket_type} pass`
             });
             skippedCount++;
             continue;
           }
         } else {
-          // Create user profile
+          // Create new user
           const { data: newUser, error: createError } = await supabaseAdmin
             .from('users')
             .insert({
               name,
               phone,
               email,
-              age,
-              gender
+              age: isNaN(age) ? 21 : age,
+              gender,
+              instagram: null
             })
             .select('id')
             .single();
@@ -110,7 +146,7 @@ export async function POST(request: Request) {
               email,
               ticketType: ticket_type,
               status: 'ERROR',
-              message: createError?.message || 'Failed to insert user profile'
+              message: createError?.message || 'Failed to create user record'
             });
             errorCount++;
             continue;
@@ -120,7 +156,7 @@ export async function POST(request: Request) {
         }
 
         const allowedTypes = ['Regular', 'VIP', 'Couple', 'Staff', 'Guest List'];
-        const normalizedTicketType = allowedTypes.includes(ticket_type)
+        const normalizedTicketType = allowedTypes.includes(ticket_type) || ticket_type.toLowerCase().includes('table')
           ? ticket_type
           : ticket_type === 'VVIP'
           ? 'VIP'
@@ -128,53 +164,33 @@ export async function POST(request: Request) {
           ? 'Couple'
           : 'Regular';
 
-        // Insert ticket
-        const { data: tempTicket, error: ticketError } = await supabaseAdmin
-          .from('tickets')
-          .insert({
-            user_id: userId,
-            ticket_type: normalizedTicketType,
-            qr_token: `BULK_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            is_used: false,
-            is_banned: false
-          })
-          .select('id')
-          .single();
-
-        if (ticketError || !tempTicket) {
-          results.push({
-            name,
-            phone,
-            email,
-            ticketType: ticket_type,
-            status: 'ERROR',
-            message: ticketError?.message || 'Failed to insert ticket row'
-          });
-          errorCount++;
-          continue;
-        }
-
-        const ticketId = tempTicket.id;
+        const ticketId = randomUUID();
         const qrToken = signQRToken({
           i: ticketId,
           n: name,
-          t: ticket_type
+          t: normalizedTicketType
         });
 
-        // Update token
-        const { error: updateError } = await supabaseAdmin
+        // Insert ticket with explicit UUID
+        const { error: ticketError } = await supabaseAdmin
           .from('tickets')
-          .update({ qr_token: qrToken })
-          .eq('id', ticketId);
+          .insert({
+            id: ticketId,
+            user_id: userId,
+            ticket_type: normalizedTicketType,
+            qr_token: qrToken,
+            is_used: false,
+            is_banned: false
+          });
 
-        if (updateError) {
+        if (ticketError) {
           results.push({
             name,
             phone,
             email,
             ticketType: ticket_type,
             status: 'ERROR',
-            message: 'Failed to update token signature'
+            message: ticketError.message || 'Failed to insert ticket row'
           });
           errorCount++;
           continue;
@@ -191,7 +207,7 @@ export async function POST(request: Request) {
           message: 'Pass created successfully',
           linkUrl: `/?ticket=${qrToken}`
         });
-        createdCount++;
+        successCount++;
       } catch (innerError: any) {
         results.push({
           name,
@@ -208,7 +224,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       totalProcessed: guests.length,
-      created: createdCount,
+      created: successCount,
       skipped: skippedCount,
       errors: errorCount,
       results

@@ -35,8 +35,30 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (fetchError || !ticket) {
-        console.error(`Sync error: Ticket ${ticket_id} fetch failed or missing.`, fetchError);
-        // Continue processing other tickets, skip this one to avoid blocking sync queue
+        console.warn(`Sync warning: Ticket ${ticket_id} missing in DB during sync. Creating fallback ticket row to satisfy foreign keys.`);
+        try {
+          await supabaseAdmin.from('tickets').insert({
+            id: ticket_id,
+            user_id: null,
+            ticket_type: 'VIP (Offline Synced)',
+            qr_token: `OFFLINE_${ticket_id}`,
+            is_used: true,
+            used_at: timestamp,
+            is_banned: false
+          });
+
+          await supabaseAdmin.from('checkins').insert({
+            ticket_id,
+            gate: gate || 'Offline Gate',
+            scanner_device: scanner_device || deviceName,
+            online_or_offline: 'offline',
+            timestamp
+          });
+          syncedIds.push(id);
+          successfulSyncs++;
+        } catch (fallbackErr) {
+          console.error(`Sync failure for offline ticket ${ticket_id}:`, fallbackErr);
+        }
         continue;
       }
 

@@ -322,6 +322,38 @@ export default function StaffDashboard() {
       const ticket = await getOfflineTicketByToken(qrToken);
       
       if (!ticket) {
+        const parts = qrToken.split('.');
+        if (parts.length === 3) {
+          try {
+            const payloadJson = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (payloadJson && payloadJson.i && payloadJson.n) {
+              const resLog = await logOfflineCheckin(payloadJson.i, qrToken, gate, device);
+              if (resLog.status === 'already_used') {
+                setResultState('already_used');
+                setResultDetails({
+                  name: payloadJson.n,
+                  ticketType: payloadJson.t || 'Regular',
+                  usedAt: new Date().toISOString(),
+                  message: 'Already checked in locally at this gate'
+                });
+                playSound('error');
+                return;
+              }
+              setResultState('valid');
+              setResultDetails({
+                name: payloadJson.n,
+                ticketType: payloadJson.t || 'Regular',
+                entryTime: new Date().toISOString()
+              });
+              playSound('success');
+              if (payloadJson.t === 'VIP' || payloadJson.t?.includes('Table')) {
+                confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+              }
+              return;
+            }
+          } catch (_) {}
+        }
+
         setResultState('invalid');
         setResultDetails({
           name: 'Unknown Guest',
