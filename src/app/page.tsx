@@ -393,26 +393,26 @@ function GuestPageContent() {
   if (ticketToken && tokenError) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#060608] px-6 text-center text-white">
-        <div className="rounded-3xl border border-red-500/20 bg-red-950/10 p-8 max-w-md">
-          <QrCode className="mx-auto h-16 w-16 text-red-500" />
-          <h2 className="mt-6 text-xl font-bold text-white">Invalid Ticket Pass</h2>
-          <p className="mt-3 text-sm text-zinc-400">
-            This verification link is invalid, expired, or has been tampered with. Please ask the organizer to issue a new pass.
+        <div className="rounded-3xl border border-red-500/20 bg-red-950/10 p-8 max-w-md shadow-2xl backdrop-blur-xl">
+          <QrCode className="mx-auto h-16 w-16 text-red-500 animate-pulse" />
+          <h2 className="mt-6 text-xl font-bold text-white tracking-wide">Invalid or Expired Ticket Pass</h2>
+          <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
+            This entry pass verification link is invalid, expired, or has been altered. All digital tickets are cryptographically secured. Please request a valid pass link from your official organizer.
           </p>
           <a
             href="/"
-            className="mt-6 inline-block rounded-xl bg-zinc-900 border border-zinc-800 px-6 py-2.5 text-xs font-semibold text-zinc-300 hover:text-white"
+            className="mt-6 inline-block rounded-xl bg-zinc-900 border border-zinc-800 px-6 py-3 text-xs font-bold tracking-wider text-zinc-300 hover:text-white hover:border-zinc-700 transition-all"
           >
-            GO TO HOME
+            RETURN TO PRIVATE PORTAL
           </a>
         </div>
       </div>
     );
   }
 
-  // DEFAULT LANDING VIEW: PUBLIC INFO
+  // DEFAULT LANDING VIEW: PASS-ONLY LOCK SCREEN (Prevents public discovery of internal pricing and tables)
   return (
-    <div className="flex min-h-screen flex-col bg-[#060608] text-white">
+    <div className="flex min-h-screen flex-col bg-[#060608] text-white justify-between">
       {/* Dynamic Theme Glow Effects */}
       <div className={`absolute top-0 left-1/4 -z-10 h-96 w-96 rounded-full ${currentTheme.glow} opacity-5 blur-[120px]`}></div>
       <div className={`absolute top-1/3 right-1/4 -z-10 h-[400px] w-[400px] rounded-full ${currentTheme.glow} opacity-5 blur-[150px]`}></div>
@@ -423,289 +423,63 @@ function GuestPageContent() {
           <div className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-5 object-contain" />
-            <span className="text-[9px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">QR GENERATOR</span>
+            <span className="text-[9px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">EXCLUSIVE PORTAL</span>
           </div>
-          
           <div className="flex items-center gap-4">
             <a 
               href="/admin" 
               className={`rounded-full ${currentTheme.bg} ${currentTheme.hoverBg} px-4 py-1.5 text-xs font-semibold tracking-wider text-black transition-all`}
             >
-              ADMIN PANEL
+              STAFF LOGIN
             </a>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="mx-auto max-w-4xl px-6 py-12 md:py-24 text-center">
-        <div className="space-y-8 flex flex-col items-center">
+      {/* Main Lock Content */}
+      <main className="mx-auto max-w-lg px-6 py-16 text-center flex-1 flex flex-col items-center justify-center">
+        <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-8 sm:p-10 shadow-2xl backdrop-blur-xl relative overflow-hidden w-full">
+          <div className={`absolute -top-12 -right-12 h-36 w-36 rounded-full ${currentTheme.glow} opacity-10 blur-2xl`}></div>
           
-          {/* Hero Details */}
-          <div className="space-y-6 max-w-2xl mx-auto">
-            <div className={`inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950 px-3.5 py-1 text-xs ${currentTheme.text}`}>
-              <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-              <span>OFFICIAL ANNOUNCEMENT</span>
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6 shadow-inner">
+            <ShieldCheck className={`h-7 w-7 ${currentTheme.text}`} />
+          </div>
+
+          <span className="text-[10px] uppercase tracking-[0.3em] font-extrabold text-zinc-400 block mb-2">PRIVATE EVENT ACCESS</span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-3">
+            {eventSettings.title}
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed mb-8">
+            {eventSettings.subtitle}. Entry passes for this event are strictly private and invitation-only. Please use the unique QR link shared via WhatsApp or SMS to view your entrance ticket.
+          </p>
+
+          <div className="rounded-2xl bg-zinc-900/60 border border-zinc-850 p-4 text-left space-y-2 mb-6">
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-zinc-200">
+              <QrCode className="h-4 w-4 text-[#cca43b]" />
+              <span>Personalized QR Pass Required</span>
             </div>
-            
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.1]">
-              <span className="block text-zinc-400 text-2xl font-semibold tracking-[0.3em] uppercase mb-2">EXPERIENCE</span>
-              {eventSettings.title}
-            </h1>
-            
-            <p className="text-base sm:text-lg text-zinc-400 font-light">
-              {eventSettings.subtitle}. Immerse yourself in state-of-the-art production, spatial audio design, and premium dark luxury aesthetics.
+            <p className="text-[11px] text-zinc-400 font-light leading-normal">
+              Each digital pass contains a cryptographic signature verified directly at the venue gate. Unauthorized link tampering or manipulation is monitored and flagged by our security system.
             </p>
+          </div>
 
-            {/* Lineup */}
-            <div className="grid grid-cols-2 gap-6 border-t border-white/5 pt-6 mx-auto max-w-md">
-              <div>
-                <span className="text-xs uppercase text-zinc-500 tracking-wider font-semibold">Lineup</span>
-                <span className="block mt-1 font-semibold text-zinc-200">{eventSettings.lineup_artist || 'KAYLA (Berlin)'}</span>
-                <span className="block text-sm text-zinc-400 font-light">{eventSettings.lineup_genre || 'DEEP NOIR / TECHNO'}</span>
-              </div>
-              <div>
-                <span className="text-xs uppercase text-zinc-500 tracking-wider font-semibold">Support</span>
-                <span className="block mt-1 font-semibold text-zinc-200">{eventSettings.support_artist || 'AETHER SOUNDS'}</span>
-                <span className="block text-sm text-zinc-400 font-light">{eventSettings.support_genre || 'MELODIC PROGRESSIVE'}</span>
-              </div>
-            </div>
-
-            {/* Info Cards */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-6 border-t border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-zinc-900 p-2.5 text-[#cca43b]">
-                  <Calendar className={`h-5 w-5 ${currentTheme.text}`} />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-semibold text-zinc-200 text-sm">{eventSettings.date}</h4>
-                  <p className="text-xs text-zinc-500">{eventSettings.time}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-zinc-900 p-2.5 text-[#cca43b]">
-                  <MapPin className={`h-5 w-5 ${currentTheme.text}`} />
-                </div>
-                <div className="text-left">
-                  <h4 className="font-semibold text-zinc-200 text-sm">{eventSettings.venue}</h4>
-                  <p className="text-xs text-zinc-500">{eventSettings.address}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* FULL PRICING & VIP TABLE BOOKING SECTION (Ankur Bishnoi Model) */}
-            <div className="mt-12 pt-10 border-t border-white/10 text-left space-y-8">
-              <div className="text-center space-y-2">
-                <span className="text-[10px] uppercase font-bold tracking-[0.3em] text-[#cca43b]">EXCLUSIVE ACCESS</span>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white">ENTRY PHASES & VIP TABLES</h2>
-                <p className="text-xs text-zinc-400 max-w-md mx-auto">
-                  Strictly limited capacity (80 passes • 32 table seats). Select your access tier below to reserve instantly.
-                </p>
-              </div>
-
-              {/* VIP Table Bookings Card */}
-              <div className="rounded-2xl border border-[#cca43b]/40 bg-gradient-to-b from-[#cca43b]/10 via-zinc-950 to-zinc-950 p-6 shadow-[0_0_30px_rgba(204,164,59,0.1)]">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-white/10 pb-4">
-                  <div>
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-[#ffe082] bg-[#cca43b]/20 px-2.5 py-1 rounded-full border border-[#cca43b]/40">
-                      BOTTLE SERVICE • VIP SEATING
-                    </span>
-                    <h3 className="text-xl font-bold text-white mt-2">VIP TABLE RESERVATIONS</h3>
-                  </div>
-                  <div className="text-xs text-zinc-400">
-                    Total Table Capacity: <span className="text-white font-semibold">32 People Max</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Small Table */}
-                  <div className="rounded-xl bg-zinc-900/80 border border-zinc-800 p-5 flex flex-col justify-between hover:border-[#cca43b]/50 transition-all">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-sm font-bold text-white">SMALL TABLE</span>
-                        <span className="text-xs text-[#ffe082] bg-[#cca43b]/10 px-2 py-0.5 rounded border border-[#cca43b]/30">₹2,500 COVER</span>
-                      </div>
-                      <div className="mt-3">
-                        <span className="text-2xl font-extrabold text-white">₹7,999</span>
-                        <span className="text-xs text-zinc-400 ml-1">all inclusive</span>
-                      </div>
-                      <ul className="mt-3 space-y-1.5 text-xs text-zinc-300">
-                        <li>• Includes <span className="text-white font-semibold">₹2,500</span> redeemable cover</li>
-                        <li>• Dedicated VIP table & host service</li>
-                        <li>• Priority skip-the-line check-in</li>
-                      </ul>
-                    </div>
-                    <a
-                      href="https://wa.me/919999999999?text=Hi%20Club%20Nirvana%2C%20I%20would%20like%20to%20book%20a%20Small%20VIP%20Table%20(%E2%82%B97%2C999%20with%20%E2%82%B92%2C500%20Cover)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-5 w-full rounded-lg bg-[#cca43b] py-2.5 text-center text-xs font-bold text-black hover:bg-[#ffe082] transition-colors block"
-                    >
-                      RESERVE SMALL TABLE
-                    </a>
-                  </div>
-
-                  {/* Big Table */}
-                  <div className="rounded-xl bg-zinc-900/80 border border-[#cca43b]/40 p-5 flex flex-col justify-between hover:border-[#cca43b] transition-all">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <span className="text-sm font-bold text-white">BIG TABLE</span>
-                        <span className="text-xs text-[#ffe082] bg-[#cca43b]/20 px-2 py-0.5 rounded border border-[#cca43b]/50 font-semibold">₹3,999 COVER</span>
-                      </div>
-                      <div className="mt-3">
-                        <span className="text-2xl font-extrabold text-[#ffe082]">₹11,999</span>
-                        <span className="text-xs text-zinc-400 ml-1">all inclusive</span>
-                      </div>
-                      <ul className="mt-3 space-y-1.5 text-xs text-zinc-300">
-                        <li>• Includes <span className="text-white font-semibold">₹3,999</span> redeemable cover</li>
-                        <li>• Premium stage-view VIP booth</li>
-                        <li>• Priority skip-the-line check-in</li>
-                      </ul>
-                    </div>
-                    <a
-                      href="https://wa.me/919999999999?text=Hi%20Club%20Nirvana%2C%20I%20would%20like%20to%20book%20a%20Big%20VIP%20Table%20(%E2%82%B911%2C999%20with%20%E2%82%B93%2C999%20Cover)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-5 w-full rounded-lg bg-gradient-to-r from-[#cca43b] to-amber-500 py-2.5 text-center text-xs font-bold text-black hover:opacity-90 transition-opacity block"
-                    >
-                      RESERVE BIG TABLE
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Entry Passes Breakdown (Phases 1, 2, On-Board) */}
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <h3 className="text-lg font-bold text-white">ENTRY PASS PHASES</h3>
-                  <span className="text-xs text-zinc-400">80 Passes Limit • 20 Guestlist Slots</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Phase 1 */}
-                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-zinc-850 pb-2">
-                      <span className="text-xs font-bold text-emerald-400">PHASE 1 (EARLY)</span>
-                      <span className="text-[10px] text-zinc-500">OPEN</span>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Stag Entry / +Cover</span>
-                        <span className="text-white font-medium">₹699 / ₹1,500</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Couple Entry / +Cover</span>
-                        <span className="text-white font-medium">₹599 / ₹2,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Girls (First 20 Free)</span>
-                        <span className="text-emerald-400 font-bold">FREE / ₹1,000</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Phase 2 */}
-                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-zinc-850 pb-2">
-                      <span className="text-xs font-bold text-amber-400">PHASE 2</span>
-                      <span className="text-[10px] text-zinc-500">UPCOMING</span>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Stag Entry / +Cover</span>
-                        <span className="text-white font-medium">₹999 / ₹2,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Couple Entry / +Cover</span>
-                        <span className="text-white font-medium">₹999 / ₹2,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Girls (First 10 @299)</span>
-                        <span className="text-white font-medium">₹299 / ₹1,200</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Phase 3 / Door */}
-                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 p-4 space-y-3">
-                    <div className="flex justify-between items-center border-b border-zinc-850 pb-2">
-                      <span className="text-xs font-bold text-purple-400">ON-BOARD / DOOR</span>
-                      <span className="text-[10px] text-zinc-500">DOOR</span>
-                    </div>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Stag Entry / +Cover</span>
-                        <span className="text-white font-medium">₹1,399 / ₹3,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Couple Entry / +Cover</span>
-                        <span className="text-white font-medium">₹1,200 / ₹2,500</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Girls Entry / +Cover</span>
-                        <span className="text-white font-medium">₹599 / ₹1,500</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 text-center">
-                  <a
-                    href="https://wa.me/919999999999?text=Hi%20Club%20Nirvana%2C%20I%20would%20like%20to%20book%20an%20Entry%20Pass"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 px-6 py-2.5 text-xs font-bold text-white transition-colors"
-                  >
-                    BOOK PASS VIA CONCIERGE
-                  </a>
-                </div>
-              </div>
-            </div>
+          <div className="text-[11px] text-zinc-500 font-medium">
+            Need assistance or didn&apos;t receive your pass? Contact your official host or promoter.
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-20 border-t border-zinc-900 bg-black/80 py-12 text-zinc-500">
-        <div className="mx-auto max-w-4xl px-6">
-          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 pb-8 border-b border-zinc-900/60">
-            <div className="footer-brand">
-              <a href="#" className="cursor-pointer">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/madsphere_logo.png" alt="MadSphere" className="h-9 object-contain" />
-              </a>
-            </div>
-            
-            <div className="text-center md:text-left">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Connect</div>
-              <ul className="space-y-2 text-xs uppercase tracking-wider">
-                <li>
-                  <a href="https://instagram.com/madsphere.co" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
-                    Instagram
-                  </a>
-                </li>
-                <li>
-                  <a href="https://linkedin.com/company/madsphere" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
-                    LinkedIn
-                  </a>
-                </li>
-                <li>
-                  <a href="mailto:madsphere.info@gmail.com" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
-                    Email Us
-                  </a>
-                </li>
-                <li>
-                  <a href="https://madsphere-web.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors cursor-pointer text-zinc-500">
-                    Website
-                  </a>
-                </li>
-              </ul>
-            </div>
+      <footer className="border-t border-zinc-900 bg-black/80 py-8 text-zinc-500">
+        <div className="mx-auto max-w-4xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/madsphere_logo.png" alt="MadSphere" className="h-6 object-contain opacity-60" />
+            <span className="text-[10px] uppercase tracking-wider text-zinc-600">© 2026 MadSphere. All rights reserved.</span>
           </div>
-
-          <div className="pt-6 text-center text-[10px] uppercase tracking-wider text-zinc-600 border-t border-zinc-900/60">
-            <div>© 2026 MadSphere. All rights reserved. Built with purpose.</div>
+          <div className="flex gap-4 text-[11px]">
+            <a href="https://instagram.com/madsphere.co" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300 transition-colors">Instagram</a>
+            <a href="mailto:madsphere.info@gmail.com" className="hover:text-zinc-300 transition-colors">Support</a>
           </div>
         </div>
       </footer>

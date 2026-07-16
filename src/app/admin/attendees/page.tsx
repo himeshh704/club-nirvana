@@ -75,17 +75,20 @@ export default function AttendeeDirectory() {
     const role = localStorage.getItem('staff_role') || 'Admin';
     const user = localStorage.getItem('staff_user') || 'Super Admin';
     
-    if (auth !== 'true' || (role !== 'Admin' && role !== 'Manager')) {
+    if (auth !== 'true') {
       router.push('/staff/login');
+      return;
+    }
+    
+    // Strict Route-Level Security: Only Admin role can access Attendee Directory
+    if (role !== 'Admin') {
+      router.push('/admin');
       return;
     }
     
     setAuthorized(true);
     setUserRole(role);
     setLoggedUser(user);
-    if (role === 'Manager' && (user === 'Ankur Bishnoi' || user === 'Angad Bishnoi')) {
-      setCollectorFilter(user);
-    }
     fetchAttendees();
 
     // Fetch dynamic event settings

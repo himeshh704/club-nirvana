@@ -921,7 +921,7 @@ export default function AdminPage() {
               👤 {loggedUser} ({userRole})
             </span>
             <a href="/" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
-            {(userRole === 'Admin' || userRole === 'Manager') && (
+            {userRole === 'Admin' && (
               <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
             )}
             <button
