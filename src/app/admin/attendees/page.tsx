@@ -30,6 +30,8 @@ interface Attendee {
   is_used: boolean;
   used_at: string | null;
   is_banned: boolean;
+  payment_method?: string;
+  collected_by?: string;
 }
 
 export default function AttendeeDirectory() {
@@ -111,7 +113,7 @@ export default function AttendeeDirectory() {
     if (filterType === 'All') return matchesSearch;
     if (filterType === 'Checked In') return matchesSearch && item.is_used;
     if (filterType === 'Remaining') return matchesSearch && !item.is_used;
-    if (filterType === 'VIP') return matchesSearch && (item.ticket_type === 'VIP' || item.ticket_type === 'VVIP' || item.ticket_type.toLowerCase().includes('vip'));
+    if (filterType === 'VIP') return matchesSearch && (item.ticket_type === 'VIP' || item.ticket_type === 'VVIP' || item.ticket_type.toLowerCase().includes('vip') || item.ticket_type.toLowerCase().includes('table'));
     if (filterType === 'VIP Tables') return matchesSearch && item.ticket_type.toLowerCase().includes('table');
     if (filterType === 'Blacklisted') return matchesSearch && item.is_banned;
     return matchesSearch;
@@ -185,7 +187,7 @@ export default function AttendeeDirectory() {
       fetchAttendees();
     } catch (err) {
       console.error(err);
-      alert('Deletion failed.');
+      alert('Action failed.');
     }
   };
 
@@ -215,15 +217,17 @@ export default function AttendeeDirectory() {
       return;
     }
 
-    const headers = ['Ticket ID', 'Name', 'Phone', 'Email', 'Ticket Type', 'Checked In', 'Check-in Time', 'Banned Status'];
+    const headers = ['Ticket ID', 'Name', 'Phone', 'Email', 'Ticket Type', 'Payment Method', 'Collected By', 'Checked In', 'Check-in Time', 'Banned Status'];
     const rows = filteredAttendees.map(a => [
       a.id,
-      a.name,
+      `"${a.name}"`,
       `"${a.phone}"`,
       a.email,
-      a.ticket_type,
+      `"${a.ticket_type}"`,
+      `"${a.payment_method || 'Complimentary'}"`,
+      `"${a.collected_by || 'Super Admin'}"`,
       a.is_used ? 'YES' : 'NO',
-      a.used_at ? new Date(a.used_at).toLocaleString() : 'N/A',
+      a.used_at ? `"${new Date(a.used_at).toLocaleString()}"` : 'N/A',
       a.is_banned ? 'YES' : 'NO'
     ]);
 
@@ -331,6 +335,7 @@ export default function AttendeeDirectory() {
                 <tr className="border-b border-zinc-900 text-zinc-500 text-xs font-semibold uppercase bg-black/20 whitespace-nowrap">
                   <th className="py-4 px-6">Attendee Info</th>
                   <th className="py-4 px-4">Ticket Type</th>
+                  <th className="py-4 px-4">Payment & Collector</th>
                   <th className="py-4 px-4">Pass Sharing Link</th>
                   <th className="py-4 px-4">Gate Status</th>
                   <th className="py-4 px-6 text-right">Actions</th>
@@ -339,7 +344,7 @@ export default function AttendeeDirectory() {
               <tbody className="divide-y divide-zinc-900">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-zinc-500">
+                    <td colSpan={6} className="py-12 text-center text-zinc-500">
                       <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#cca43b] border-t-transparent mx-auto"></div>
                       <span className="block mt-3 text-xs tracking-wider">LOADING DIRECTORY...</span>
                     </td>
@@ -367,6 +372,22 @@ export default function AttendeeDirectory() {
                           {(attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' || attendee.ticket_type.toLowerCase().includes('table')) && <Sparkles className="h-3 w-3 text-[#cca43b]" />}
                           {attendee.ticket_type}
                         </span>
+                      </td>
+
+                      {/* Payment & Collector */}
+                      <td className="py-4 px-4">
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase border ${
+                            attendee.payment_method === 'Cash' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                            attendee.payment_method === 'UPI' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' :
+                            'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                          }`}>
+                            {attendee.payment_method || 'Complimentary'}
+                          </span>
+                          <div className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
+                            <span>👤 {attendee.collected_by || 'Super Admin'}</span>
+                          </div>
+                        </div>
                       </td>
  
                       {/* URL Sharing */}
@@ -466,7 +487,7 @@ export default function AttendeeDirectory() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-zinc-600 font-light">
+                    <td colSpan={6} className="py-12 text-center text-zinc-600 font-light">
                       No attendee registrations match search query.
                     </td>
                   </tr>

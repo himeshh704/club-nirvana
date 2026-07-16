@@ -56,7 +56,9 @@ export async function POST(request: Request) {
             qr_token: `OFFLINE_${ticket_id}`,
             is_used: true,
             used_at: validTimestamp,
-            is_banned: false
+            is_banned: false,
+            payment_method: 'Complimentary',
+            collected_by: 'Offline Scanner'
           });
 
           await supabaseAdmin.from('checkins').insert({

@@ -78,7 +78,9 @@ export async function POST(request: Request) {
           qr_token: qrToken,
           is_used: true,
           used_at: now,
-          is_banned: false
+          is_banned: false,
+          payment_method: 'Complimentary',
+          collected_by: 'Gate Scanner'
         });
       } catch (insertErr) {
         console.warn('Could not auto-create missing ticket before checkin (might already exist):', insertErr);

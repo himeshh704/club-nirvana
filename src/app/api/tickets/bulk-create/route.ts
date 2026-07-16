@@ -11,6 +11,8 @@ interface BulkGuestInput {
   age?: string | number;
   gender?: string;
   ticket_type?: string;
+  payment_method?: string;
+  collected_by?: string;
 }
 
 export async function POST(request: Request) {
@@ -171,8 +173,8 @@ export async function POST(request: Request) {
               qr_token: qrToken,
               is_used: false,
               is_banned: false,
-              payment_method: 'Complimentary',
-              collected_by: 'Super Admin'
+              payment_method: guest.payment_method || 'Complimentary',
+              collected_by: guest.collected_by || 'Super Admin'
             });
 
           if (ticketError) {

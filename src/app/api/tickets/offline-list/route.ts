@@ -14,6 +14,8 @@ export async function GET() {
         is_used,
         used_at,
         is_banned,
+        payment_method,
+        collected_by,
         users (
           name,
           phone
@@ -35,7 +37,9 @@ export async function GET() {
       qr_token: t.qr_token,
       is_used: t.is_used,
       used_at: t.used_at,
-      is_banned: t.is_banned
+      is_banned: t.is_banned,
+      payment_method: t.payment_method || 'Complimentary',
+      collected_by: t.collected_by || 'Super Admin'
     }));
 
     return NextResponse.json({

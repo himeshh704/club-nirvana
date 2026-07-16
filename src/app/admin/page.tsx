@@ -43,6 +43,20 @@ interface DashboardStats {
   vipGuests: number;
 }
 
+interface RevenueSummary {
+  cashTotal: number;
+  upiTotal: number;
+  compTotal: number;
+  byCollector: {
+    [name: string]: {
+      cash: number;
+      upi: number;
+      comp: number;
+      total: number;
+    };
+  };
+}
+
 interface RecentCheckin {
   id: string;
   name: string;
@@ -63,6 +77,12 @@ export default function AdminPage() {
     checkedIn: 0,
     remaining: 0,
     vipGuests: 0
+  });
+  const [revenueSummary, setRevenueSummary] = useState<RevenueSummary>({
+    cashTotal: 0,
+    upiTotal: 0,
+    compTotal: 0,
+    byCollector: {}
   });
   const [recentCheckins, setRecentCheckins] = useState<RecentCheckin[]>([]);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -143,7 +163,12 @@ export default function AdminPage() {
         const list = data.tickets;
         const total = list.length;
         const checked = list.filter((t: any) => t.is_used).length;
-        const vip = list.filter((t: any) => t.ticket_type === 'VIP').length;
+        const vip = list.filter((t: any) => 
+          t.ticket_type === 'VIP' || 
+          t.ticket_type === 'VVIP' || 
+          t.ticket_type?.toLowerCase().includes('vip') || 
+          t.ticket_type?.toLowerCase().includes('table')
+        ).length;
         
         setStats({
           totalGuests: total,
@@ -151,6 +176,34 @@ export default function AdminPage() {
           remaining: Math.max(0, total - checked),
           vipGuests: vip
         });
+
+        const revSummary: RevenueSummary = {
+          cashTotal: 0,
+          upiTotal: 0,
+          compTotal: 0,
+          byCollector: {}
+        };
+
+        list.forEach((t: any) => {
+          const method = t.payment_method || 'Complimentary';
+          const collector = t.collected_by || 'Super Admin';
+          if (!revSummary.byCollector[collector]) {
+            revSummary.byCollector[collector] = { cash: 0, upi: 0, comp: 0, total: 0 };
+          }
+          if (method === 'Cash') {
+            revSummary.cashTotal++;
+            revSummary.byCollector[collector].cash++;
+          } else if (method === 'UPI') {
+            revSummary.upiTotal++;
+            revSummary.byCollector[collector].upi++;
+          } else {
+            revSummary.compTotal++;
+            revSummary.byCollector[collector].comp++;
+          }
+          revSummary.byCollector[collector].total++;
+        });
+
+        setRevenueSummary(revSummary);
 
         // Derive recent checked-in list (mocking gate info for dashboard display)
         const recent = list
@@ -933,7 +986,69 @@ export default function AdminPage() {
               ) : (
                 <h2 className={`text-3xl font-extrabold mt-1 tracking-wide ${activeTheme.text}`}>{stats.vipGuests}</h2>
               )}
-              <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>VIP lounge credentials</p>
+              <p className={`text-[10px] mt-2 opacity-80 ${activeTheme.text}`}>VIP & Table passes</p>
+            </div>
+          </div>
+        )}
+
+        {/* Revenue & Collector Audit Panel (Admin Only) */}
+        {userRole === 'Admin' && (
+          <div className="glass-panel rounded-3xl p-6 border border-zinc-900 bg-gradient-to-br from-black/80 to-zinc-950/60 shadow-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900/80 pb-5 mb-5">
+              <div>
+                <h3 className="text-sm font-bold tracking-wider text-white flex items-center gap-2 uppercase">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Revenue & Collector Breakdown
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Live audit of payment methods (Cash vs UPI) and collector accounts</p>
+              </div>
+              <div className="flex flex-wrap gap-2.5 items-center">
+                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 flex items-center gap-2">
+                  <span className="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider">Cash Passes:</span>
+                  <span className="text-sm font-extrabold text-white">{revenueSummary.cashTotal}</span>
+                </div>
+                <div className="rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-3.5 py-1.5 flex items-center gap-2">
+                  <span className="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider">UPI Passes:</span>
+                  <span className="text-sm font-extrabold text-white">{revenueSummary.upiTotal}</span>
+                </div>
+                <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 px-3.5 py-1.5 flex items-center gap-2">
+                  <span className="text-[10px] text-purple-400 font-semibold uppercase tracking-wider">Complimentary:</span>
+                  <span className="text-sm font-extrabold text-white">{revenueSummary.compTotal}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.keys(revenueSummary.byCollector).length === 0 ? (
+                <div className="col-span-3 text-center py-6 text-xs text-zinc-500 font-light">No ticket collection data recorded yet.</div>
+              ) : (
+                Object.entries(revenueSummary.byCollector).map(([collector, counts]) => (
+                  <div key={collector} className="rounded-2xl bg-zinc-950/80 border border-zinc-800/80 p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-zinc-900 pb-2.5">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        👤 {collector}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
+                        Total: {counts.total}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 pt-0.5 text-center">
+                      <div className="rounded-xl bg-emerald-950/20 border border-emerald-500/10 p-2">
+                        <span className="text-[9px] uppercase tracking-wider text-emerald-400 block font-semibold">Cash</span>
+                        <span className="text-base font-extrabold text-white mt-0.5 block">{counts.cash}</span>
+                      </div>
+                      <div className="rounded-xl bg-cyan-950/20 border border-cyan-500/10 p-2">
+                        <span className="text-[9px] uppercase tracking-wider text-cyan-400 block font-semibold">UPI</span>
+                        <span className="text-base font-extrabold text-white mt-0.5 block">{counts.upi}</span>
+                      </div>
+                      <div className="rounded-xl bg-purple-950/20 border border-purple-500/10 p-2">
+                        <span className="text-[9px] uppercase tracking-wider text-purple-400 block font-semibold">Comp</span>
+                        <span className="text-base font-extrabold text-white mt-0.5 block">{counts.comp}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
