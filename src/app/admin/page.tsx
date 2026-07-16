@@ -27,7 +27,8 @@ import {
   Clock,
   CheckCircle2,
   Volume2,
-  VolumeX
+  VolumeX,
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
@@ -463,6 +464,15 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [router]);
 
+  const handleLogout = () => {
+    localStorage.removeItem('staff_authenticated');
+    localStorage.removeItem('staff_role');
+    localStorage.removeItem('staff_user');
+    localStorage.removeItem('staff_gate');
+    localStorage.removeItem('staff_device');
+    router.push('/staff/login');
+  };
+
   // Form Submit Handler
   const handleGenerateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -854,6 +864,13 @@ export default function AdminPage() {
             {userRole === 'Admin' && (
               <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
             )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-[10px] md:text-xs font-semibold text-red-400 hover:bg-red-500 hover:text-white transition-all"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              LOG OUT
+            </button>
           </div>
         </div>
       </header>

@@ -13,18 +13,15 @@ export default function StaffLoginPage() {
   const [deviceName, setDeviceName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [existingSession, setExistingSession] = useState<{ user: string; role: string } | null>(null);
 
   useEffect(() => {
     // Check if already logged in
     const auth = localStorage.getItem('staff_authenticated');
     const role = localStorage.getItem('staff_role');
+    const user = localStorage.getItem('staff_user');
     if (auth === 'true') {
-      if (role === 'Admin' || role === 'Manager') {
-        router.push('/admin');
-      } else {
-        router.push('/staff/dashboard');
-      }
-      return;
+      setExistingSession({ user: user || role || 'Staff', role: role || 'Security' });
     }
 
     if (typeof window !== 'undefined') {
@@ -123,6 +120,46 @@ export default function StaffLoginPage() {
               <p className="text-xs text-zinc-500 font-light">Enter gate credentials to initialize terminal</p>
             </div>
           </div>
+
+          {existingSession && (
+            <div className="rounded-2xl bg-purple-950/30 border border-purple-500/30 p-4 mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-[10px] text-purple-300 font-semibold uppercase tracking-wider">Active Logged-In Session</p>
+                  <p className="text-sm font-bold text-white mt-0.5">👤 {existingSession.user} <span className="text-xs font-normal text-zinc-400">({existingSession.role})</span></p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (existingSession.role === 'Admin' || existingSession.role === 'Manager') {
+                      router.push('/admin');
+                    } else {
+                      router.push('/staff/dashboard');
+                    }
+                  }}
+                  className="flex-1 rounded-xl bg-purple-600 py-2 px-3 text-xs font-bold text-white hover:bg-purple-500 transition-all text-center"
+                >
+                  Return to Console
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('staff_authenticated');
+                    localStorage.removeItem('staff_role');
+                    localStorage.removeItem('staff_user');
+                    localStorage.removeItem('staff_gate');
+                    localStorage.removeItem('staff_device');
+                    setExistingSession(null);
+                  }}
+                  className="rounded-xl border border-red-500/40 bg-red-500/10 py-2 px-3 text-xs font-semibold text-red-400 hover:bg-red-500 hover:text-white transition-all text-center"
+                >
+                  Log Out Session
+                </button>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             {error && (

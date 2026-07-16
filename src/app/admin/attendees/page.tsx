@@ -15,7 +15,8 @@ import {
   RefreshCcw,
   AlertOctagon,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -90,6 +91,15 @@ export default function AttendeeDirectory() {
       })
       .catch(err => console.error('Error fetching settings for WhatsApp template:', err));
   }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('staff_authenticated');
+    localStorage.removeItem('staff_role');
+    localStorage.removeItem('staff_user');
+    localStorage.removeItem('staff_gate');
+    localStorage.removeItem('staff_device');
+    router.push('/staff/login');
+  };
 
   // Filter and Search logic
   const filteredAttendees = attendees.filter((item) => {
@@ -252,13 +262,22 @@ export default function AttendeeDirectory() {
             </div>
           </div>
           
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-500 transition-all w-full sm:w-auto justify-center"
-          >
-            <Download className="h-4 w-4" />
-            EXPORT TO CSV
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-500 transition-all w-full sm:w-auto justify-center"
+            >
+              <Download className="h-4 w-4" />
+              EXPORT TO CSV
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-400 hover:bg-red-500 hover:text-white transition-all w-full sm:w-auto justify-center"
+            >
+              <LogOut className="h-4 w-4" />
+              LOG OUT
+            </button>
+          </div>
         </div>
       </header>
 
