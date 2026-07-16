@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE TABLE IF NOT EXISTS public.tickets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    ticket_type TEXT NOT NULL CHECK (ticket_type IN ('Regular', 'VIP', 'Couple', 'Staff', 'Guest List')),
+    ticket_type TEXT NOT NULL,
     qr_token TEXT NOT NULL UNIQUE,
     is_used BOOLEAN NOT NULL DEFAULT FALSE,
     used_at TIMESTAMPTZ,

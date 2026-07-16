@@ -40,6 +40,9 @@ export default function AttendeeDirectory() {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
+  const [collectorFilter, setCollectorFilter] = useState('All');
+  const [userRole, setUserRole] = useState('Admin');
+  const [loggedUser, setLoggedUser] = useState('Super Admin');
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -69,14 +72,20 @@ export default function AttendeeDirectory() {
 
   useEffect(() => {
     const auth = localStorage.getItem('staff_authenticated');
-    const role = localStorage.getItem('staff_role');
+    const role = localStorage.getItem('staff_role') || 'Admin';
+    const user = localStorage.getItem('staff_user') || 'Super Admin';
     
-    if (auth !== 'true' || role !== 'Admin') {
+    if (auth !== 'true' || (role !== 'Admin' && role !== 'Manager')) {
       router.push('/staff/login');
       return;
     }
     
     setAuthorized(true);
+    setUserRole(role);
+    setLoggedUser(user);
+    if (role === 'Manager' && (user === 'Ankur Bishnoi' || user === 'Angad Bishnoi')) {
+      setCollectorFilter(user);
+    }
     fetchAttendees();
 
     // Fetch dynamic event settings
@@ -105,6 +114,14 @@ export default function AttendeeDirectory() {
 
   // Filter and Search logic
   const filteredAttendees = attendees.filter((item) => {
+    const effectiveCollector = (userRole === 'Manager' && (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi'))
+      ? loggedUser
+      : collectorFilter;
+
+    if (effectiveCollector !== 'All' && item.collected_by !== effectiveCollector) {
+      return false;
+    }
+
     const matchesSearch = 
       item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.phone.includes(search) ||
@@ -265,8 +282,10 @@ export default function AttendeeDirectory() {
               <p className="text-xs text-zinc-500 font-light">Manage registrations, blacklist overrides, and entry logs</p>
             </div>
           </div>
-          
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <span className="text-xs text-zinc-400 font-semibold px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hidden md:inline-block">
+              👤 {loggedUser}
+            </span>
             <button
               onClick={handleExportCSV}
               className="flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-purple-500 transition-all w-full sm:w-auto justify-center"
@@ -300,6 +319,32 @@ export default function AttendeeDirectory() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl bg-zinc-950 border border-zinc-900 pl-10 pr-4 py-3 text-sm gold-border-glow"
             />
+          </div>
+
+          {/* Collected By Filter Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-400 uppercase whitespace-nowrap hidden sm:inline">Collected By:</span>
+            {userRole === 'Manager' && (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? (
+              <select
+                value={loggedUser}
+                disabled
+                className="rounded-xl bg-zinc-950/60 border border-zinc-800 px-3.5 py-3 text-xs font-bold text-amber-300 opacity-90 cursor-not-allowed"
+              >
+                <option value={loggedUser}>{loggedUser} (Portal Locked)</option>
+              </select>
+            ) : (
+              <select
+                value={collectorFilter}
+                onChange={(e) => setCollectorFilter(e.target.value)}
+                className="rounded-xl bg-zinc-950 border border-purple-500/40 px-3.5 py-3 text-xs font-bold text-purple-300 focus:outline-none focus:border-purple-400"
+              >
+                <option value="All">All Collectors</option>
+                <option value="Super Admin">Super Admin</option>
+                <option value="Ankur Bishnoi">Ankur Bishnoi</option>
+                <option value="Angad Bishnoi">Angad Bishnoi</option>
+                <option value="Promoter / Other">Promoter / Coordinator</option>
+              </select>
+            )}
           </div>
 
           {/* Filter Categories */}

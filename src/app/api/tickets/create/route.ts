@@ -42,87 +42,77 @@ export async function POST(request: Request) {
 
     const ticketId = randomUUID();
 
-    try {
-      // 1. Create or retrieve the user in Supabase (optional best-effort sync)
-      const { data: existingUser } = await supabaseAdmin
+    // 1. Create or retrieve the user in Supabase
+    let userId = null;
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('phone', phone)
+      .maybeSingle();
+
+    if (existingUser?.id) {
+      userId = existingUser.id;
+    } else {
+      const { data: newUser, error: userError } = await supabaseAdmin
         .from('users')
+        .insert({
+          name,
+          phone,
+          email,
+          age: parseInt(age, 10) || 21,
+          gender,
+          instagram: instagram || null
+        })
         .select('id')
-        .eq('phone', phone)
-        .maybeSingle();
+        .single();
 
-      let userId = existingUser?.id;
-
-      if (!userId) {
-        const { data: newUser } = await supabaseAdmin
-          .from('users')
-          .insert({
-            name,
-            phone,
-            email,
-            age: parseInt(age, 10) || 21,
-            gender,
-            instagram: instagram || null
-          })
-          .select('id')
-          .single();
-
-        if (newUser) {
-          userId = newUser.id;
-        }
+      if (userError || !newUser) {
+        console.error('Error creating user record:', userError);
+        return NextResponse.json(
+          { error: `Database error creating guest profile: ${userError?.message || 'Unknown error'}` },
+          { status: 500 }
+        );
       }
-
-      if (userId) {
-        // Insert ticket into DB if user was found/created with explicit UUID
-        await supabaseAdmin
-          .from('tickets')
-          .insert({
-            id: ticketId,
-            user_id: userId,
-            ticket_type,
-            qr_token: `TEMP_${ticketId}`,
-            is_used: false,
-            is_banned: false,
-            payment_method: payment_method || 'Complimentary',
-            collected_by: collected_by || 'Super Admin'
-          });
-      }
-    } catch (dbErr) {
-      console.warn('Database sync warning during ticket creation, continuing with cryptographic generation:', dbErr);
+      userId = newUser.id;
     }
 
-    // Cryptographically sign the QR token
+    // 2. Cryptographically sign the QR token
     const qrToken = signQRToken({
       i: ticketId,
       n: name,
       t: ticket_type
     });
 
-    // Best-effort update or upsert of token in database so foreign keys work reliably
-    try {
-      const { data: updatedRows } = await supabaseAdmin
-        .from('tickets')
-        .update({ 
-          qr_token: qrToken,
-          payment_method: payment_method || 'Complimentary',
-          collected_by: collected_by || 'Super Admin'
-        })
-        .eq('id', ticketId)
-        .select('id');
+    // 3. Insert ticket cleanly into database
+    const { error: ticketError } = await supabaseAdmin
+      .from('tickets')
+      .insert({
+        id: ticketId,
+        user_id: userId,
+        ticket_type,
+        qr_token: qrToken,
+        is_used: false,
+        is_banned: false,
+        payment_method: payment_method || 'Complimentary',
+        collected_by: collected_by || 'Super Admin'
+      });
 
-      if (!updatedRows || updatedRows.length === 0) {
-        // Insert fallback record with UUID if user link failed
-        await supabaseAdmin.from('tickets').insert({
-          id: ticketId,
-          ticket_type,
-          qr_token: qrToken,
-          is_used: false,
-          is_banned: false,
-          payment_method: payment_method || 'Complimentary',
-          collected_by: collected_by || 'Super Admin'
-        });
+    if (ticketError) {
+      console.error('Error inserting ticket into database:', ticketError);
+      const isCheckConstraint = ticketError.code === '23514' || ticketError.message?.includes('tickets_ticket_type_check');
+      const isNotNullConstraint = ticketError.code === '23502';
+      
+      let errorMsg = `Database error saving ticket: ${ticketError.message}`;
+      if (isCheckConstraint) {
+        errorMsg = `Database Check Constraint Violation ("tickets_ticket_type_check").\n\nYour Supabase database currently restricts ticket types. To allow VIP Tables and all custom tiers, please run this exact 1-line SQL query in your Supabase Dashboard SQL Editor:\n\nALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_ticket_type_check;`;
+      } else if (isNotNullConstraint) {
+        errorMsg = `Database Schema Violation: ${ticketError.message}`;
       }
-    } catch (e) {
-      // Ignore DB update error
+
+      return NextResponse.json(
+        { error: errorMsg },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

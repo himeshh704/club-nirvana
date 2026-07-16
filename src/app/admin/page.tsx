@@ -151,7 +151,9 @@ export default function AdminPage() {
   const [brandSupportGenre, setBrandSupportGenre] = useState('MELODIC PROGRESSIVE');
 
   // Fetch metrics and recent scans
-  const fetchMetrics = async () => {
+  const fetchMetrics = async (customRole?: string, customUser?: string) => {
+    const roleToUse = typeof customRole === 'string' ? customRole : userRole;
+    const userToUse = typeof customUser === 'string' ? customUser : loggedUser;
     setLoadingStats(true);
     try {
       // Direct fetch from offline-list API to calculate metrics client side
@@ -160,7 +162,12 @@ export default function AdminPage() {
       const data = await res.json();
       
       if (data.success && data.tickets) {
-        const list = data.tickets;
+        const fullList = data.tickets;
+        // If Manager (Ankur or Angad), filter stats & recent checkins strictly to their collected tickets
+        const list = roleToUse === 'Manager'
+          ? fullList.filter((t: any) => t.collected_by === userToUse)
+          : fullList;
+
         const total = list.length;
         const checked = list.filter((t: any) => t.is_used).length;
         const vip = list.filter((t: any) => 
@@ -184,7 +191,7 @@ export default function AdminPage() {
           byCollector: {}
         };
 
-        list.forEach((t: any) => {
+        fullList.forEach((t: any) => {
           const method = t.payment_method || 'Complimentary';
           const collector = t.collected_by || 'Super Admin';
           if (!revSummary.byCollector[collector]) {
@@ -442,7 +449,7 @@ export default function AdminPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'admin8824'
+          'Authorization': 'admin098'
         },
         body: JSON.stringify({
           title: brandTitle,
@@ -509,11 +516,11 @@ export default function AdminPage() {
       setCollectedBy(user);
     }
 
-    fetchMetrics();
+    fetchMetrics(role, user);
     fetchBranding();
     
     // Auto-refresh stats every 30 seconds
-    const interval = setInterval(fetchMetrics, 30000);
+    const interval = setInterval(() => fetchMetrics(role, user), 30000);
     return () => clearInterval(interval);
   }, [router]);
 
@@ -557,7 +564,7 @@ export default function AdminPage() {
           instagram: '',
           ticket_type: ticketType,
           payment_method: paymentStatus,
-          collected_by: collectedBy
+          collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
         })
       });
 
@@ -637,7 +644,7 @@ export default function AdminPage() {
           ticket_type: fullTableType,
           table_number: tableNumber.trim(),
           payment_method: paymentStatus,
-          collected_by: collectedBy
+          collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
         })
       });
 
@@ -914,7 +921,7 @@ export default function AdminPage() {
               👤 {loggedUser} ({userRole})
             </span>
             <a href="/" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">GUEST PORTAL</a>
-            {userRole === 'Admin' && (
+            {(userRole === 'Admin' || userRole === 'Manager') && (
               <a href="/admin/attendees" className="rounded-full border border-zinc-800 px-4 py-1.5 text-[10px] md:text-xs text-zinc-400 hover:text-white transition-all">ATTENDEE DIRECTORY</a>
             )}
             <button
@@ -931,8 +938,8 @@ export default function AdminPage() {
       {/* Main Grid */}
       <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
         
-        {/* Statistics Panels (Admin Only) */}
-        {userRole === 'Admin' && (
+        {/* Statistics Panels (Admin & Manager) */}
+        {(userRole === 'Admin' || userRole === 'Manager') && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="glass-panel rounded-2xl p-5 border border-zinc-900">
               <div className="flex justify-between items-center text-zinc-500">
@@ -1173,16 +1180,26 @@ export default function AdminPage() {
 
                     <div className="space-y-1.5">
                       <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Collected By *</label>
-                      <select
-                        value={collectedBy}
-                        onChange={(e) => setCollectedBy(e.target.value)}
-                        className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm text-white font-medium focus:border-amber-400"
-                      >
-                        <option value="Super Admin">Super Admin</option>
-                        <option value="Ankur Bishnoi">Ankur Bishnoi</option>
-                        <option value="Angad Bishnoi">Angad Bishnoi</option>
-                        <option value="Promoter / Other">Promoter / Coordinator</option>
-                      </select>
+                      {loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi' ? (
+                        <select
+                          value={loggedUser}
+                          disabled
+                          className="w-full rounded-xl bg-zinc-950/60 border border-zinc-800 px-4 py-3 text-sm text-amber-300 font-semibold opacity-90 cursor-not-allowed"
+                        >
+                          <option value={loggedUser}>{loggedUser} (Portal Locked)</option>
+                        </select>
+                      ) : (
+                        <select
+                          value={collectedBy}
+                          onChange={(e) => setCollectedBy(e.target.value)}
+                          className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm text-white font-medium focus:border-amber-400"
+                        >
+                          <option value="Super Admin">Super Admin</option>
+                          <option value="Ankur Bishnoi">Ankur Bishnoi</option>
+                          <option value="Angad Bishnoi">Angad Bishnoi</option>
+                          <option value="Promoter / Other">Promoter / Coordinator</option>
+                        </select>
+                      )}
                     </div>
                   </div>
 
@@ -1307,16 +1324,26 @@ export default function AdminPage() {
 
                     <div className="space-y-1.5">
                       <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Collected By *</label>
-                      <select
-                        value={collectedBy}
-                        onChange={(e) => setCollectedBy(e.target.value)}
-                        className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
-                      >
-                        <option value="Super Admin">Super Admin</option>
-                        <option value="Ankur Bishnoi">Ankur Bishnoi</option>
-                        <option value="Angad Bishnoi">Angad Bishnoi</option>
-                        <option value="Promoter / Other">Promoter / Coordinator</option>
-                      </select>
+                      {loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi' ? (
+                        <select
+                          value={loggedUser}
+                          disabled
+                          className="w-full rounded-xl bg-zinc-950/60 border border-zinc-800 px-4 py-3 text-sm text-amber-300 font-semibold opacity-90 cursor-not-allowed"
+                        >
+                          <option value={loggedUser}>{loggedUser} (Portal Locked)</option>
+                        </select>
+                      ) : (
+                        <select
+                          value={collectedBy}
+                          onChange={(e) => setCollectedBy(e.target.value)}
+                          className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
+                        >
+                          <option value="Super Admin">Super Admin</option>
+                          <option value="Ankur Bishnoi">Ankur Bishnoi</option>
+                          <option value="Angad Bishnoi">Angad Bishnoi</option>
+                          <option value="Promoter / Other">Promoter / Coordinator</option>
+                        </select>
+                      )}
                     </div>
                   </div>
 
@@ -1770,7 +1797,7 @@ export default function AdminPage() {
               <h3 className="text-lg font-bold tracking-wide">LATEST ENTRY ARRIVALS</h3>
             </div>
             <button 
-              onClick={fetchMetrics}
+              onClick={() => fetchMetrics()}
               className="rounded-lg bg-zinc-900 border border-zinc-850 p-2 text-zinc-400 hover:text-white"
             >
               <RefreshCcw className="h-3.5 w-3.5" />

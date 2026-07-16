@@ -47,7 +47,7 @@ export default function StaffLoginPage() {
     let targetRole = '';
     let targetUser = '';
 
-    if ((userClean === 'superadmin' || userClean === 'admin' || userClean === '') && (passClean === 'admin8824' || passClean === 'admin123')) {
+    if ((userClean === 'superadmin' || userClean === 'admin' || userClean === '') && (passClean === 'admin098' || passClean === 'admin8824' || passClean === 'admin123')) {
       targetRole = 'Admin';
       targetUser = 'Super Admin';
     } else if ((userClean === 'ankur bishnoi' || userClean === 'ankur' || userClean === '' || passClean === 'ankur1234') && passClean === 'ankur1234') {
@@ -59,7 +59,7 @@ export default function StaffLoginPage() {
     } else if ((userClean === 'staff' || userClean === 'gate' || userClean === '' || passClean === 'staf1234' || passClean === 'gate123') && (passClean === 'staf1234' || passClean === 'gate123')) {
       targetRole = 'Security';
       targetUser = 'Gate Staff';
-    } else if (passClean === 'admin8824') {
+    } else if (passClean === 'admin098' || passClean === 'admin8824' || passClean === 'admin123') {
       targetRole = 'Admin';
       targetUser = 'Super Admin';
     } else if (passClean === 'ankur1234') {
