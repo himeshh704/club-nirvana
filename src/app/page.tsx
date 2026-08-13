@@ -237,7 +237,8 @@ function GuestPageContent() {
     }
   };
 
-  const currentTheme = themeMap[eventSettings.accent_color] || themeMap.red;
+  const effectiveColor = (eventSettings.accent_color === 'gold' || !eventSettings.accent_color) ? 'red' : eventSettings.accent_color;
+  const currentTheme = themeMap[effectiveColor] || themeMap.red;
 
   // RENDER TICKET VIEW
   if (ticketToken && ticketData) {
