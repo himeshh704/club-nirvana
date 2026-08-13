@@ -48,9 +48,10 @@ export default function AttendeeDirectory() {
 
   // Dynamic branding settings for WhatsApp share message text
   const [eventSettings, setEventSettings] = useState({
-    title: 'VANGUARD // NOTHING',
-    venue: 'Club Nirvana',
-    address: 'Jodhpur'
+    title: 'ROCKSTAR',
+    subtitle: 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
+    venue: 'Tastora Cafe',
+    address: 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur'
   });
 
   const fetchAttendees = async () => {
@@ -98,6 +99,7 @@ export default function AttendeeDirectory() {
         if (data && data.title) {
           setEventSettings({
             title: data.title,
+            subtitle: data.subtitle || 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
             venue: data.venue,
             address: data.address
           });
@@ -225,7 +227,7 @@ export default function AttendeeDirectory() {
       cleanNumber = '91' + cleanNumber; // Default to India country code
     }
     const passLink = `${window.location.origin}/?ticket=${qrToken}`;
-    const message = `Hey *${name}*! 🎟️\n\nHere is your entrance ticket pass for *${eventSettings.title}* at ${eventSettings.venue}, ${eventSettings.address}.\n\nType: *${ticketType}*\nPass Link: ${passLink}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
+    const message = `Hey *${name}*! 🎬🍿\n\nHere is your entry pass for *${eventSettings.title} - ${eventSettings.subtitle || 'A Bollywood Themed Movie Experience'}* at ${eventSettings.venue}, ${eventSettings.address}.\n\n📅 Date: *16 AUG 2026 (SUNDAY)*\n⏰ Time: *8:00 PM ONWARDS*\n🎟️ Pass Type: *${ticketType}*\n📍 Venue: *${eventSettings.venue}*\n\nPass Link: ${passLink}\n\nPlease keep this QR code ready at the entrance gate for scanning! See you at the movies! 🥂`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };

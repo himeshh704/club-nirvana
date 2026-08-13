@@ -24,8 +24,8 @@ export default function GuestPage() {
     <Suspense fallback={
       <div className="flex h-screen items-center justify-center bg-[#060608] text-white">
         <div className="relative">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-[#cca43b] border-t-transparent"></div>
-          <div className="mt-4 text-sm tracking-widest text-zinc-400">LOADING VANGUARD...</div>
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-red-600 border-t-transparent"></div>
+          <div className="mt-4 text-sm tracking-widest text-zinc-400">LOADING PASS PORTAL...</div>
         </div>
       </div>
     }>
@@ -53,17 +53,17 @@ function GuestPageContent() {
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const [eventSettings, setEventSettings] = useState({
-    title: "VANGUARD // NOTHING",
-    subtitle: "AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE",
-    date: "To Be Disclosed",
-    time: "9:00 PM - 4:00 AM",
-    venue: "Club Nirvana",
-    address: "Jodhpur",
-    accent_color: "gold",
-    lineup_artist: "KAYLA (Berlin)",
-    lineup_genre: "DEEP NOIR / TECHNO",
-    support_artist: "AETHER SOUNDS",
-    support_genre: "MELODIC PROGRESSIVE"
+    title: "ROCKSTAR",
+    subtitle: "A BOLLYWOOD THEMED MOVIE EXPERIENCE",
+    date: "16 AUG 2026 (SUNDAY)",
+    time: "8:00 PM ONWARDS (GATES 7:30 PM)",
+    venue: "Tastora Cafe",
+    address: "Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur",
+    accent_color: "red",
+    lineup_artist: "ROCKSTAR (Ranbir Kapoor, Nargis Fakhri)",
+    lineup_genre: "BOLLYWOOD MOVIE EXPERIENCE",
+    support_artist: "HOUSE OF CHAOS",
+    support_genre: "Phase 1 Pass ₹399 (Incl. ₹300 Cover)"
   });
 
   // Fetch dynamic branding/event configurations
@@ -85,7 +85,7 @@ function GuestPageContent() {
       try {
         const parts = ticketToken.split('.');
         if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1]));
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
           const ticketId = payload.i || payload.ticketId;
           const name = payload.n || payload.name || 'Valued Guest';
           const ticketType = payload.t || payload.ticketType || 'Regular';
@@ -121,16 +121,19 @@ function GuestPageContent() {
 
   // Copy Ticket Link
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (ticketToken) {
+      const passUrl = `${window.location.origin}/?ticket=${ticketToken}`;
+      navigator.clipboard.writeText(passUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
-  // Trigger Print/Download Layout or Native Share on mobile
+  // Download or Share Ticket Pass image
   const handleDownload = async () => {
-    if (!qrUrl || !ticketData) return;
+    if (!ticketData || !qrUrl) return;
+    
     try {
-      // Direct base64 to Blob conversion (fixes Safari/Chrome mobile fetch failures)
       const byteString = atob(qrUrl.split(',')[1]);
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
@@ -138,14 +141,14 @@ function GuestPageContent() {
         ia[i] = byteString.charCodeAt(i);
       }
       const blob = new Blob([ab], { type: 'image/png' });
-      const filename = `vanguard-pass-${ticketData.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+      const filename = `movie-pass-${ticketData.name.toLowerCase().replace(/\s+/g, '-')}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
       
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: 'Vanguard Entry Pass',
-          text: `My QR entrance pass for VANGUARD // NOTHING!`
+          title: `${eventSettings.title} Pass`,
+          text: `My entrance pass for ${eventSettings.title} - ${eventSettings.subtitle}!`
         });
       } else {
         const link = document.createElement('a');
@@ -172,6 +175,16 @@ function GuestPageContent() {
     bg: string;
     hoverBg: string;
   }> = {
+    red: {
+      text: 'text-red-500',
+      border: 'border-red-500/40',
+      borderPulse: 'shadow-[0_0_15px_rgba(239,68,68,0.3)] border-red-500/40',
+      glow: 'bg-red-600',
+      badge: 'border-red-500 text-red-300 bg-red-950/30',
+      topGrad: 'from-amber-400 via-red-600 to-rose-900',
+      bg: 'bg-red-600',
+      hoverBg: 'hover:bg-red-500'
+    },
     gold: {
       text: 'text-[#cca43b]',
       border: 'border-[#cca43b]/40',
@@ -224,7 +237,7 @@ function GuestPageContent() {
     }
   };
 
-  const currentTheme = themeMap[eventSettings.accent_color] || themeMap.gold;
+  const currentTheme = themeMap[eventSettings.accent_color] || themeMap.red;
 
   // RENDER TICKET VIEW
   if (ticketToken && ticketData) {

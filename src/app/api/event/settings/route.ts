@@ -5,17 +5,17 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_SETTINGS = {
   id: '00000000-0000-0000-0000-000000000001',
-  title: 'VANGUARD // NOTHING',
-  subtitle: 'AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE',
-  date: 'To Be Disclosed',
-  time: '9:00 PM - 4:00 AM',
-  venue: 'Club Nirvana',
-  address: 'Jodhpur',
-  accent_color: 'gold',
-  lineup_artist: 'KAYLA (Berlin)',
-  lineup_genre: 'DEEP NOIR / TECHNO',
-  support_artist: 'AETHER SOUNDS',
-  support_genre: 'MELODIC PROGRESSIVE'
+  title: 'ROCKSTAR',
+  subtitle: 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
+  date: '16 AUG 2026 (SUNDAY)',
+  time: '8:00 PM ONWARDS (GATES 7:30 PM)',
+  venue: 'Tastora Cafe',
+  address: 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur',
+  accent_color: 'red',
+  lineup_artist: 'ROCKSTAR (Ranbir Kapoor, Nargis Fakhri)',
+  lineup_genre: 'BOLLYWOOD MOVIE EXPERIENCE',
+  support_artist: 'HOUSE OF CHAOS',
+  support_genre: 'Phase 1 Pass ₹399 (Incl. ₹300 Cover)'
 };
 
 export async function GET() {
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required branding fields' }, { status: 400 });
     }
 
-    const validColors = ['gold', 'pink', 'purple', 'emerald', 'blue'];
+    const validColors = ['gold', 'pink', 'purple', 'emerald', 'blue', 'red'];
     if (!validColors.includes(accent_color)) {
       return NextResponse.json({ error: 'Invalid accent color selected' }, { status: 400 });
     }
@@ -68,15 +68,15 @@ export async function POST(request: Request) {
         id: DEFAULT_SETTINGS.id,
         title,
         subtitle: subtitle || '',
-        date: date || 'To Be Disclosed',
-        time: time || '9:00 PM - 4:00 AM',
+        date: date || '16 AUG 2026 (SUNDAY)',
+        time: time || '8:00 PM ONWARDS',
         venue,
         address: address || 'Jodhpur',
         accent_color,
-        lineup_artist: lineup_artist || 'KAYLA (Berlin)',
-        lineup_genre: lineup_genre || 'DEEP NOIR / TECHNO',
-        support_artist: support_artist || 'AETHER SOUNDS',
-        support_genre: support_genre || 'MELODIC PROGRESSIVE'
+        lineup_artist: lineup_artist || 'ROCKSTAR (Ranbir Kapoor, Nargis Fakhri)',
+        lineup_genre: lineup_genre || 'BOLLYWOOD MOVIE EXPERIENCE',
+        support_artist: support_artist || 'HOUSE OF CHAOS',
+        support_genre: support_genre || 'Phase 1 Pass ₹399 (Incl. ₹300 Cover)'
       })
       .select('*')
       .single();

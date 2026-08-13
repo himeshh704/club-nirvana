@@ -124,13 +124,13 @@ export default function AdminPage() {
   const [bulkResults, setBulkResults] = useState<any[]>([]);
   const [bulkSummary, setBulkSummary] = useState<any>(null);
   const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(true);
-  const [brandTitle, setBrandTitle] = useState('VANGUARD // NOTHING');
-  const [brandSubtitle, setBrandSubtitle] = useState('AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE');
-  const [brandDate, setBrandDate] = useState('To Be Disclosed');
-  const [brandTime, setBrandTime] = useState('9:00 PM - 4:00 AM');
-  const [brandVenue, setBrandVenue] = useState('Club Nirvana');
-  const [brandAddress, setBrandAddress] = useState('Jodhpur');
-  const [brandColor, setBrandColor] = useState('gold');
+  const [brandTitle, setBrandTitle] = useState('ROCKSTAR');
+  const [brandSubtitle, setBrandSubtitle] = useState('A BOLLYWOOD THEMED MOVIE EXPERIENCE');
+  const [brandDate, setBrandDate] = useState('16 AUG 2026 (SUNDAY)');
+  const [brandTime, setBrandTime] = useState('8:00 PM ONWARDS');
+  const [brandVenue, setBrandVenue] = useState('Tastora Cafe');
+  const [brandAddress, setBrandAddress] = useState('Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur');
+  const [brandColor, setBrandColor] = useState('red');
   const [savingBranding, setSavingBranding] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -146,10 +146,10 @@ export default function AdminPage() {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   // Lineup & Support States
-  const [brandLineupArtist, setBrandLineupArtist] = useState('KAYLA (Berlin)');
-  const [brandLineupGenre, setBrandLineupGenre] = useState('DEEP NOIR / TECHNO');
-  const [brandSupportArtist, setBrandSupportArtist] = useState('AETHER SOUNDS');
-  const [brandSupportGenre, setBrandSupportGenre] = useState('MELODIC PROGRESSIVE');
+  const [brandLineupArtist, setBrandLineupArtist] = useState('ROCKSTAR (Ranbir Kapoor, Nargis Fakhri)');
+  const [brandLineupGenre, setBrandLineupGenre] = useState('BOLLYWOOD MOVIE EXPERIENCE');
+  const [brandSupportArtist, setBrandSupportArtist] = useState('HOUSE OF CHAOS');
+  const [brandSupportGenre, setBrandSupportGenre] = useState('Phase 1 Pass ₹399 (Incl. ₹300 Cover)');
 
   // Fetch metrics and recent scans
   const fetchMetrics = async (customRole?: string, customUser?: string) => {
@@ -159,10 +159,14 @@ export default function AdminPage() {
     try {
       // Direct fetch from offline-list API to calculate metrics client side
       const res = await fetch('/api/tickets/offline-list');
-      if (!res.ok) throw new Error('Failed to fetch ticket list');
+      if (!res.ok) {
+        console.warn('Database offline or unreachable. Displaying fallback stats.');
+        setLoadingStats(false);
+        return;
+      }
       const data = await res.json();
       
-      if (data.success && data.tickets) {
+      if (data && Array.isArray(data.tickets)) {
         const fullList = data.tickets;
         // If Manager (Ankur or Angad), filter stats & recent checkins strictly to their collected tickets
         const list = roleToUse === 'Manager'
@@ -335,7 +339,7 @@ export default function AdminPage() {
           await logOfflineCheckin(localTicket.id, qrToken, 'Admin Gate', 'Admin Console');
           setScanningResult('valid');
           setScanningDetails({
-            name: (localTicket as any).users?.name || 'VIP Guest',
+            name: localTicket.name || (localTicket as any).users?.name || 'VIP Guest',
             ticketType: localTicket.ticket_type || 'Regular',
             message: 'Checked in via Offline DB Cache',
             usedAt: new Date().toISOString()
@@ -732,7 +736,7 @@ export default function AdminPage() {
       cleanNumber = '91' + cleanNumber; // Default to India prefix if 10 digits
     }
     
-    const message = `Hey *${generatedTicket.guestName}*! 🎟️\n\nHere is your entrance ticket pass for *${brandTitle}* at ${brandVenue}, ${brandAddress}.\n\nType: *${generatedTicket.ticketType}*\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this link or QR image ready at the entrance gate for scanning! See you there. 🥂`;
+    const message = `Hey *${generatedTicket.guestName}*! 🎬🍿\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}* at ${brandVenue}, ${brandAddress}.\n\n📅 Date: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Type: *${generatedTicket.ticketType}*\n📍 Venue: *${brandVenue}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the entrance gate for scanning! See you at the movies! 🥂`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
@@ -1445,6 +1449,7 @@ export default function AdminPage() {
                     <label className="text-xs text-zinc-500 uppercase tracking-wider block">Pass Accent Theme Color *</label>
                     <div className="flex flex-wrap gap-4 p-4 rounded-2xl bg-zinc-950 border border-zinc-900">
                       {[
+                        { id: 'red', hex: '#ef4444', label: 'Red' },
                         { id: 'gold', hex: '#cca43b', label: 'Gold' },
                         { id: 'pink', hex: '#ec4899', label: 'Pink' },
                         { id: 'purple', hex: '#a855f7', label: 'Purple' },

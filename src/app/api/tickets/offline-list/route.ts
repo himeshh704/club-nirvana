@@ -24,7 +24,7 @@ export async function GET() {
 
     if (error) {
       console.error('Error fetching offline ticket list:', error);
-      return NextResponse.json({ error: 'Failed to fetch tickets from database' }, { status: 500 });
+      return NextResponse.json({ success: true, tickets: [], error: 'Failed to fetch tickets from database' });
     }
 
     // Map to a clean flat structure for client IndexedDB consumption
@@ -49,6 +49,6 @@ export async function GET() {
 
   } catch (error) {
     console.error('Error in offline list API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: true, tickets: [], error: 'Internal server error' });
   }
 }

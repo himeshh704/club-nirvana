@@ -93,19 +93,19 @@ CREATE POLICY "Allow service_role full access to sync_logs" ON public.sync_logs 
 -- Event Custom Branding Settings Table
 CREATE TABLE IF NOT EXISTS public.event_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL DEFAULT 'VANGUARD // NOTHING',
-    subtitle TEXT NOT NULL DEFAULT 'AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE',
-    date TEXT NOT NULL DEFAULT 'To Be Disclosed',
-    time TEXT NOT NULL DEFAULT '9:00 PM - 4:00 AM',
-    venue TEXT NOT NULL DEFAULT 'Club Nirvana',
-    address TEXT NOT NULL DEFAULT 'Jodhpur',
-    accent_color TEXT NOT NULL DEFAULT 'gold' CHECK (accent_color IN ('gold', 'pink', 'purple', 'emerald', 'blue')),
+    title TEXT NOT NULL DEFAULT 'ROCKSTAR',
+    subtitle TEXT NOT NULL DEFAULT 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
+    date TEXT NOT NULL DEFAULT '16 AUG 2026 (SUNDAY)',
+    time TEXT NOT NULL DEFAULT '8:00 PM ONWARDS (GATES 7:30 PM)',
+    venue TEXT NOT NULL DEFAULT 'Tastora Cafe',
+    address TEXT NOT NULL DEFAULT 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur',
+    accent_color TEXT NOT NULL DEFAULT 'red' CHECK (accent_color IN ('gold', 'pink', 'purple', 'emerald', 'blue', 'red')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Seed initial record if table is empty
 INSERT INTO public.event_settings (id, title, subtitle, date, time, venue, address, accent_color)
-VALUES ('00000000-0000-0000-0000-000000000001', 'VANGUARD // NOTHING', 'AN EXCLUSIVE MULTISENSORY CLUB EXPERIENCE', 'To Be Disclosed', '9:00 PM - 4:00 AM', 'Club Nirvana', 'Jodhpur', 'gold')
+VALUES ('00000000-0000-0000-0000-000000000001', 'ROCKSTAR', 'A BOLLYWOOD THEMED MOVIE EXPERIENCE', '16 AUG 2026 (SUNDAY)', '8:00 PM ONWARDS (GATES 7:30 PM)', 'Tastora Cafe', 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur', 'red')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.event_settings ENABLE ROW LEVEL SECURITY;
