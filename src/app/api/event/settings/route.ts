@@ -5,17 +5,17 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_SETTINGS = {
   id: '00000000-0000-0000-0000-000000000001',
-  title: 'ROCKSTAR',
-  subtitle: 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
-  date: '16 AUG 2026 (SUNDAY)',
-  time: '8:00 PM ONWARDS (GATES 7:30 PM)',
-  venue: 'Tastora Cafe',
-  address: 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur',
-  accent_color: 'red',
-  lineup_artist: 'ROCKSTAR (Ranbir Kapoor, Nargis Fakhri)',
-  lineup_genre: 'BOLLYWOOD MOVIE EXPERIENCE',
-  support_artist: 'HOUSE OF CHAOS',
-  support_genre: 'Phase 1 Pass ₹399 (Incl. ₹300 Cover)'
+  title: 'MIDNIGHT MADNESS',
+  subtitle: 'BOLLY TECH // HOUSE PARTY (INVITE ONLY)',
+  date: '12 SEPT 2026',
+  time: '9:00 PM ONWARDS',
+  venue: 'THE HOUSE',
+  address: 'Invite Only / Shared Upon Confirmation',
+  accent_color: 'pink',
+  lineup_artist: 'MIDNIGHT MADNESS',
+  lineup_genre: 'NONSTOP MUSIC. ZERO REGRETS.',
+  support_artist: 'BOLLY TECH',
+  support_genre: 'Early Bird Pass ₹1000 (First 3 Girls FREE)'
 };
 
 export async function GET() {

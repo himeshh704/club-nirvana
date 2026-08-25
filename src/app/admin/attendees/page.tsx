@@ -48,10 +48,10 @@ export default function AttendeeDirectory() {
 
   // Dynamic branding settings for WhatsApp share message text
   const [eventSettings, setEventSettings] = useState({
-    title: 'ROCKSTAR',
-    subtitle: 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
-    venue: 'Tastora Cafe',
-    address: 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur'
+    title: 'MIDNIGHT MADNESS',
+    subtitle: 'BOLLY TECH // HOUSE PARTY (INVITE ONLY)',
+    venue: 'THE HOUSE',
+    address: 'Invite Only / Shared Upon Confirmation'
   });
 
   const fetchAttendees = async () => {

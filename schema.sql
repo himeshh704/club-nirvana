@@ -93,19 +93,19 @@ CREATE POLICY "Allow service_role full access to sync_logs" ON public.sync_logs 
 -- Event Custom Branding Settings Table
 CREATE TABLE IF NOT EXISTS public.event_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL DEFAULT 'ROCKSTAR',
-    subtitle TEXT NOT NULL DEFAULT 'A BOLLYWOOD THEMED MOVIE EXPERIENCE',
-    date TEXT NOT NULL DEFAULT '16 AUG 2026 (SUNDAY)',
-    time TEXT NOT NULL DEFAULT '8:00 PM ONWARDS (GATES 7:30 PM)',
-    venue TEXT NOT NULL DEFAULT 'Tastora Cafe',
-    address TEXT NOT NULL DEFAULT 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur',
-    accent_color TEXT NOT NULL DEFAULT 'red' CHECK (accent_color IN ('gold', 'pink', 'purple', 'emerald', 'blue', 'red')),
+    title TEXT NOT NULL DEFAULT 'MIDNIGHT MADNESS',
+    subtitle TEXT NOT NULL DEFAULT 'BOLLY TECH // HOUSE PARTY (INVITE ONLY)',
+    date TEXT NOT NULL DEFAULT '12 SEPT 2026',
+    time TEXT NOT NULL DEFAULT '9:00 PM ONWARDS',
+    venue TEXT NOT NULL DEFAULT 'THE HOUSE',
+    address TEXT NOT NULL DEFAULT 'Invite Only / Shared Upon Confirmation',
+    accent_color TEXT NOT NULL DEFAULT 'pink' CHECK (accent_color IN ('gold', 'pink', 'purple', 'emerald', 'blue', 'red')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Seed initial record if table is empty
 INSERT INTO public.event_settings (id, title, subtitle, date, time, venue, address, accent_color)
-VALUES ('00000000-0000-0000-0000-000000000001', 'ROCKSTAR', 'A BOLLYWOOD THEMED MOVIE EXPERIENCE', '16 AUG 2026 (SUNDAY)', '8:00 PM ONWARDS (GATES 7:30 PM)', 'Tastora Cafe', 'Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur', 'red')
+VALUES ('00000000-0000-0000-0000-000000000001', 'MIDNIGHT MADNESS', 'BOLLY TECH // HOUSE PARTY (INVITE ONLY)', '12 SEPT 2026', '9:00 PM ONWARDS', 'THE HOUSE', 'Invite Only / Shared Upon Confirmation', 'pink')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.event_settings ENABLE ROW LEVEL SECURITY;

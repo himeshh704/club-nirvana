@@ -124,13 +124,13 @@ export default function AdminPage() {
   const [bulkResults, setBulkResults] = useState<any[]>([]);
   const [bulkSummary, setBulkSummary] = useState<any>(null);
   const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(true);
-  const [brandTitle, setBrandTitle] = useState('ROCKSTAR');
-  const [brandSubtitle, setBrandSubtitle] = useState('A BOLLYWOOD THEMED MOVIE EXPERIENCE');
-  const [brandDate, setBrandDate] = useState('16 AUG 2026 (SUNDAY)');
-  const [brandTime, setBrandTime] = useState('8:00 PM ONWARDS');
-  const [brandVenue, setBrandVenue] = useState('Tastora Cafe');
-  const [brandAddress, setBrandAddress] = useState('Gali No. 9, Opp. AIIMS Resident Gate, Jodhpur');
-  const [brandColor, setBrandColor] = useState('red');
+  const [brandTitle, setBrandTitle] = useState('MIDNIGHT MADNESS');
+  const [brandSubtitle, setBrandSubtitle] = useState('BOLLY TECH // HOUSE PARTY (INVITE ONLY)');
+  const [brandDate, setBrandDate] = useState('12 SEPT 2026');
+  const [brandTime, setBrandTime] = useState('9:00 PM ONWARDS');
+  const [brandVenue, setBrandVenue] = useState('THE HOUSE');
+  const [brandAddress, setBrandAddress] = useState('Invite Only / Shared Upon Confirmation');
+  const [brandColor, setBrandColor] = useState('pink');
   const [savingBranding, setSavingBranding] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -146,10 +146,10 @@ export default function AdminPage() {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   // Lineup & Support States
-  const [brandLineupArtist, setBrandLineupArtist] = useState('ROCKSTAR (Ranbir Kapoor, Nargis Fakhri)');
-  const [brandLineupGenre, setBrandLineupGenre] = useState('BOLLYWOOD MOVIE EXPERIENCE');
-  const [brandSupportArtist, setBrandSupportArtist] = useState('HOUSE OF CHAOS');
-  const [brandSupportGenre, setBrandSupportGenre] = useState('Phase 1 Pass ₹399 (Incl. ₹300 Cover)');
+  const [brandLineupArtist, setBrandLineupArtist] = useState('MIDNIGHT MADNESS');
+  const [brandLineupGenre, setBrandLineupGenre] = useState('NONSTOP MUSIC. ZERO REGRETS.');
+  const [brandSupportArtist, setBrandSupportArtist] = useState('BOLLY TECH');
+  const [brandSupportGenre, setBrandSupportGenre] = useState('Early Bird Pass ₹1000 (First 3 Girls FREE)');
 
   // Fetch metrics and recent scans
   const fetchMetrics = async (customRole?: string, customUser?: string) => {
