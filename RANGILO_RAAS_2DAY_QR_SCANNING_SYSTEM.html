@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rangilo Raas 2026 - 2-Day Season Pass QR Ticket Scanning Blueprint</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 15mm 18mm 15mm;
+        }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1e293b; line-height: 1.5; font-size: 10pt; margin: 0; padding: 0; }
+        .header-banner { background: linear-gradient(135deg, #4c1d95 0%, #831843 50%, #9f1239 100%); color: #ffffff; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .header-title { font-size: 20pt; font-weight: 800; margin: 0 0 4px 0; }
+        .header-subtitle { font-size: 11pt; color: #fbcfe8; font-weight: 600; margin: 0 0 12px 0; }
+        .policy-badge { background: rgba(255, 255, 255, 0.15); color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 9pt; }
+        h2 { font-size: 13pt; color: #4c1d95; border-bottom: 2px solid #f472b6; padding-bottom: 4px; margin-top: 20px; margin-bottom: 10px; }
+        p, li { color: #334155; font-size: 9.5pt; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9pt; }
+        th { background-color: #0f172a; color: #ffffff; text-align: left; padding: 7px 9px; font-weight: 600; text-transform: uppercase; font-size: 8.5pt; }
+        td { padding: 7px 9px; border-bottom: 1px solid #e2e8f0; }
+        tr:nth-child(even) td { background-color: #f8fafc; }
+        .badge-green { color: #15803d; font-weight: 700; }
+        .badge-red { color: #b91c1c; font-weight: 700; }
+        .badge-darkred { color: #7f1d1d; font-weight: 700; }
+        .callout { background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+        .flow-container { background: #f1f5f9; border: 1px dashed #94a3b8; padding: 12px; border-radius: 6px; margin: 12px 0; font-family: monospace; font-size: 8.5pt; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+    <div class="header-banner">
+        <div class="header-title">💃 RANGILO RAAS 2026</div>
+        <div class="header-subtitle">2-Day Season Pass Smart QR Scanning Blueprint</div>
+        <div class="policy-badge">⚠️ EVENT DATES: 17th - 18th OCTOBER 2026 | ALL PASSES ARE 2-DAY COMBO PASSES</div>
+    </div>
+
+    <h2>📌 1. Executive Summary & Policy Rule</h2>
+    <p>
+        <strong>Rangilo Raas</strong> is a premier 2-day Garba festival in Jodhpur happening on <strong>17th & 18th October 2026</strong>. 
+        <strong>All official passes sold are 2-Day Season Combo Passes</strong> (valid for both October 17 and October 18). 
+        No single-day passes (Day 1 only / Day 2 only) are sold. Each pass allows 1 entry on Night 1 (Oct 17) and 1 entry on Night 2 (Oct 18).
+    </p>
+    <ul>
+        <li><strong>One Master QR Pass per Attendee:</strong> Each attendee receives 1 digital pass. Covers entry for Day 1 (Oct 17) and Day 2 (Oct 18).</li>
+        <li><strong>Automatic Date-Aware Gate Security:</strong> Scanner app enforces 1 entry per day (1 scan on October 17 + 1 scan on October 18).</li>
+        <li><strong>100% Offline-First Engine:</strong> Sub-50ms scanning speed per pass without live internet connection, preventing gate queues.</li>
+        <li><strong>Real-Time Anti-Passback Defense:</strong> Flags duplicate entry attempts instantly across all gate scanners with exact timestamps.</li>
+    </ul>
+
+    <h2>📊 2. Gate Scan Decision Matrix (Oct 17 & Oct 18)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Scan Date</th>
+                <th>Day 1 Scan Status</th>
+                <th>Day 2 Scan Status</th>
+                <th>Scanner Result</th>
+                <th>Guard UI Alert & Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Oct 17 (Day 1)</td>
+                <td>Not Used</td>
+                <td>Not Used</td>
+                <td><strong>GRANT ENTRY</strong></td>
+                <td><span class="badge-green">🟩 GREEN: Welcome [Guest Name] (Day 1 of 2)</span></td>
+            </tr>
+            <tr>
+                <td>Oct 17 (Day 1)</td>
+                <td>Already Used</td>
+                <td>Not Used</td>
+                <td><strong>REJECT (DUPLICATE)</strong></td>
+                <td><span class="badge-red">🟥 RED: Already Scanned Today at 8:14 PM</span></td>
+            </tr>
+            <tr>
+                <td>Oct 18 (Day 2)</td>
+                <td>Used (Oct 17)</td>
+                <td>Not Used</td>
+                <td><strong>GRANT ENTRY</strong></td>
+                <td><span class="badge-green">🟩 GREEN: Welcome [Guest Name] (Day 2 of 2)</span></td>
+            </tr>
+            <tr>
+                <td>Oct 18 (Day 2)</td>
+                <td>Used (Oct 17)</td>
+                <td>Already Used</td>
+                <td><strong>REJECT (DUPLICATE)</strong></td>
+                <td><span class="badge-red">🟥 RED: Already Scanned Today at 7:50 PM</span></td>
+            </tr>
+            <tr>
+                <td>Any Date</td>
+                <td>Banned</td>
+                <td>Banned</td>
+                <td><strong>DENY (BLACKLIST)</strong></td>
+                <td><span class="badge-darkred">🚨 DARK RED: Pass Blacklisted - Alert Security</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <strong>⚡ High Density Crowd Guarantee:</strong>
+        Security staff can scan 30+ attendees per minute per gate with full cryptographic authenticity verification even with 0% cellular network.
+    </div>
+
+    <h2>🚀 3. Event Execution Schedule</h2>
+    <div class="flow-container">
+OCTOBER 16 (Day -1): SYSTEM SETUP & DRILL
+├── Configure Event Metadata (Title: Rangilo Raas, Dates: Oct 17-18)
+└── Perform mock scan test across security devices in offline mode
+
+OCTOBER 17 (DAY 1 - GARBA NIGHT 1):
+├── 05:30 PM: Download Offline Ticket Manifest
+├── 06:30 PM: Gates Open - System set to Day 1 Scanning Mode (Oct 17)
+└── 11:30 PM: Day 1 reconciliation sync & report export
+
+OCTOBER 18 (DAY 2 - GRAND FINALE):
+├── 05:30 PM: Update app to Day 2 Scanning Mode (Oct 18)
+├── 06:30 PM: Gates Open - System set to Day 2 Scanning Mode
+└── 11:30 PM: Final 2-day festival attendance report export
+    </div>
+
+</body>
+</html>

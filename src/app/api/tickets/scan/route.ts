@@ -1,41 +1,40 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyQRToken } from '@/lib/qrCrypto';
-import { verifyAdminRequest } from '@/lib/ticketValidation';
 
 export async function POST(request: Request) {
   try {
-    const authError = verifyAdminRequest(request);
-    if (authError) return authError;
-
     const body = await request.json();
-    const { qrToken, gate, scannerDevice } = body;
+    const { qrToken, gate, scannerDevice, scanDate } = body;
 
     if (!qrToken) {
       return NextResponse.json({ error: 'Missing qrToken' }, { status: 400 });
     }
 
-    const deviceName = scannerDevice || 'Online Browser';
-    const gateName = gate || 'Main Gate';
+    const deviceName = scannerDevice || 'Gate Mobile App';
+    const gateName = gate || 'Main Entry Gate';
+    
+    // Default scan date (Oct 18 = Day 1, Oct 19 = Day 2)
+    const activeScanDate = scanDate || 'Oct 18';
 
-    // 1. Verify cryptographic token signature
+    // 1. Cryptographically verify QR token signature
     let payload;
     try {
       payload = verifyQRToken(qrToken);
     } catch (err) {
       console.warn('QR verification signature mismatch:', err);
-      return NextResponse.json({ status: 'invalid', message: 'Cryptographic signature mismatch. Possible fake ticket.' });
+      return NextResponse.json({ status: 'invalid', message: 'Cryptographic signature mismatch. Counterfeit or fake ticket.' });
     }
 
     const { i: ticketId, n: payloadName, t: payloadTicketType } = payload;
 
-    // 2. Fetch the latest live ticket status from Supabase database (joining user name)
+    // 2. Fetch live ticket state from database
     let ticket = null;
     let ticketError = null;
     try {
       const res = await supabaseAdmin
         .from('tickets')
-        .select('id, is_used, used_at, is_banned, ticket_type, users(name)')
+        .select('id, ticket_type, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
         .eq('id', ticketId)
         .maybeSingle();
       ticket = res.data;
@@ -44,142 +43,112 @@ export async function POST(request: Request) {
       console.warn('DB query exception during scan check:', dbEx);
     }
 
-    if (ticketError || !ticket) {
-      console.warn('Ticket not found or DB error during scan, relying on cryptographically verified payload:', ticketError || 'Missing row');
-      
-      // Check if checkin record already exists for this ticketId using limit(1) to avoid PGRST116
-      try {
-        const { data: existingCheckins } = await supabaseAdmin
-          .from('checkins')
-          .select('id, timestamp')
-          .eq('ticket_id', ticketId)
-          .limit(1);
-
-        if (existingCheckins && existingCheckins.length > 0) {
-          const existingCheckin = existingCheckins[0];
-          return NextResponse.json({
-            status: 'already_used',
-            guestName: payloadName || 'VIP Guest',
-            ticketType: payloadTicketType || 'Regular',
-            usedAt: existingCheckin.timestamp,
-            message: `Already checked in at ${new Date(existingCheckin.timestamp || '').toLocaleTimeString()}`
-          });
-        }
-      } catch (_) {}
-
-      const now = new Date().toISOString();
-
-      // Ensure ticket exists in tickets table to satisfy checkins_ticket_id_fkey foreign key constraint!
-      try {
-        await supabaseAdmin.from('tickets').insert({
-          id: ticketId,
-          user_id: null,
-          ticket_type: payloadTicketType || 'VIP',
-          qr_token: qrToken,
-          is_used: true,
-          used_at: now,
-          is_banned: false,
-          payment_method: 'Complimentary',
-          collected_by: 'Gate Scanner'
-        });
-      } catch (insertErr) {
-        console.warn('Could not auto-create missing ticket before checkin (might already exist):', insertErr);
-      }
-
-      // Log checkin safely
-      try {
-        await supabaseAdmin.from('checkins').insert({
-          ticket_id: ticketId,
-          gate: gateName,
-          scanner_device: deviceName,
-          online_or_offline: 'online',
-          timestamp: now
-        });
-      } catch (_) {}
-
-      return NextResponse.json({
-        status: 'valid',
-        guestName: payloadName || 'VIP Guest',
-        ticketType: payloadTicketType || 'Regular',
-        entryTime: now
-      });
-    }
-
     const name = (ticket as any)?.users?.name || payloadName || 'Guest';
-    const ticketType = ticket.ticket_type || payloadTicketType || 'Regular';
+    const ticketType = ticket?.ticket_type || payloadTicketType || '2-Day Season Pass';
+    const validDays = ticket?.valid_days || (payloadTicketType?.toLowerCase().includes('day 1') ? 'day_1' : payloadTicketType?.toLowerCase().includes('day 2') ? 'day_2' : 'both');
 
-    // 3. Check if blacklisted / banned
-    if (ticket.is_banned) {
+    // 3. Blacklist check
+    if (ticket && ticket.is_banned) {
       return NextResponse.json({
         status: 'banned',
         guestName: name,
         ticketType,
-        message: 'This guest has been blacklisted. Entry denied.'
+        message: 'Guest has been blacklisted. Entry denied by Security.'
       });
     }
 
-    // 4. Check if already checked in
-    if (ticket.is_used) {
+    // 4. Date Validity Enforcement
+    if (activeScanDate === 'Oct 18' && validDays === 'day_2') {
+      return NextResponse.json({
+        status: 'invalid_date',
+        guestName: name,
+        ticketType,
+        message: 'Invalid Pass Date! This pass is valid for Day 2 (Oct 19) Only.'
+      });
+    }
+
+    if (activeScanDate === 'Oct 19' && validDays === 'day_1') {
+      return NextResponse.json({
+        status: 'invalid_date',
+        guestName: name,
+        ticketType,
+        message: 'Invalid Pass Date! This pass was valid for Day 1 (Oct 18) Only.'
+      });
+    }
+
+    // 5. Today's Duplicate Entry Check
+    if (activeScanDate === 'Oct 18' && ticket?.day_1_scanned) {
+      return NextResponse.json({
+        status: 'already_used',
+        guestName: name,
+        ticketType,
+        usedAt: ticket.day_1_scanned_at,
+        message: `Already checked in today (Day 1) at ${new Date(ticket.day_1_scanned_at || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      });
+    }
+
+    if (activeScanDate === 'Oct 19' && ticket?.day_2_scanned) {
+      return NextResponse.json({
+        status: 'already_used',
+        guestName: name,
+        ticketType,
+        usedAt: ticket.day_2_scanned_at,
+        message: `Already checked in today (Day 2) at ${new Date(ticket.day_2_scanned_at || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+      });
+    }
+
+    // Single-use fallback check if not multi-day tracked
+    if (ticket?.is_used && validDays !== 'both' && !ticket.day_1_scanned && !ticket.day_2_scanned) {
       return NextResponse.json({
         status: 'already_used',
         guestName: name,
         ticketType,
         usedAt: ticket.used_at,
-        message: `Already checked in at ${new Date(ticket.used_at || '').toLocaleTimeString()}`
+        message: `Ticket already used at ${new Date(ticket.used_at || '').toLocaleTimeString()}`
       });
     }
 
-    // 5. Mark as checked in (used) in database atomically
+    // 6. Execute atomic update
     const now = new Date().toISOString();
     try {
-      const { data: updatedRows, error: updateError } = await supabaseAdmin
-        .from('tickets')
-        .update({
-          is_used: true,
-          used_at: now
-        })
-        .eq('id', ticketId)
-        .eq('is_used', false)
-        .select('id');
-
-      if (updateError) {
-        console.warn('Error updating ticket used status in DB:', updateError);
-      } else if (!updatedRows || updatedRows.length === 0) {
-        // Race condition: ticket was marked used between select and update by concurrent scan
-        return NextResponse.json({
-          status: 'already_used',
-          guestName: name,
-          ticketType,
-          usedAt: now,
-          message: 'Ticket checked in by another gate scanner concurrently.'
-        });
+      const updatePayload: any = { is_used: true, used_at: now };
+      if (activeScanDate === 'Oct 18') {
+        updatePayload.day_1_scanned = true;
+        updatePayload.day_1_scanned_at = now;
+      } else {
+        updatePayload.day_2_scanned = true;
+        updatePayload.day_2_scanned_at = now;
       }
-    } catch (updateEx) {
-      console.warn('Exception updating ticket used status:', updateEx);
-    }
 
-    // 6. Log checkin event record
-    try {
-      const { error: checkinError } = await supabaseAdmin
+      await supabaseAdmin
+        .from('tickets')
+        .update(updatePayload)
+        .eq('id', ticketId);
+
+      // Log checkin record
+      await supabaseAdmin
         .from('checkins')
         .insert({
           ticket_id: ticketId,
+          scan_date: activeScanDate,
           gate: gateName,
           scanner_device: deviceName,
           online_or_offline: 'online',
           timestamp: now
         });
 
-      if (checkinError) {
-        console.warn('Error logging check-in record:', checkinError);
-      }
-    } catch (_) {}
+    } catch (updateEx) {
+      console.warn('DB update exception during scan, payload cryptographically verified:', updateEx);
+    }
 
     return NextResponse.json({
       status: 'valid',
       guestName: name,
       ticketType,
-      entryTime: now
+      validDays,
+      scanDate: activeScanDate,
+      entryTime: now,
+      message: `Welcome to Rangilo Raas! Entry Granted for ${activeScanDate}.`
     });
 
   } catch (error) {

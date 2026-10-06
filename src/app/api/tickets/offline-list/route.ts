@@ -10,12 +10,16 @@ export async function GET() {
         id,
         user_id,
         ticket_type,
+        valid_days,
         qr_token,
         is_used,
         used_at,
         is_banned,
+        day_1_scanned,
+        day_2_scanned,
         payment_method,
         collected_by,
+        created_at,
         users (
           name,
           phone
@@ -34,12 +38,16 @@ export async function GET() {
       name: t.users?.name || 'Unknown',
       phone: t.users?.phone || '',
       ticket_type: t.ticket_type,
+      valid_days: t.valid_days || 'both',
       qr_token: t.qr_token,
       is_used: t.is_used,
       used_at: t.used_at,
       is_banned: t.is_banned,
+      day_1_scanned: t.day_1_scanned || false,
+      day_2_scanned: t.day_2_scanned || false,
       payment_method: t.payment_method || 'Complimentary',
-      collected_by: t.collected_by || 'Super Admin'
+      collected_by: t.collected_by || 'Super Admin',
+      created_at: t.created_at || new Date().toISOString()
     }));
 
     return NextResponse.json({

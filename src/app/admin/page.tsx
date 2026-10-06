@@ -28,7 +28,9 @@ import {
   CheckCircle2,
   Volume2,
   VolumeX,
-  LogOut
+  LogOut,
+  Trash2,
+  UserX
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
@@ -118,18 +120,22 @@ export default function AdminPage() {
   const [copied, setCopied] = useState(false);
 
   // White-label settings states
-  const [activeTab, setActiveTab] = useState<'create' | 'tables' | 'live' | 'bulk' | 'branding'>('create');
+  const [allTickets, setAllTickets] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'create' | 'attendees' | 'reports' | 'tables' | 'live' | 'bulk' | 'branding'>('create');
+  const [attendeeSearch, setAttendeeSearch] = useState('');
+  const [attendeeStatusFilter, setAttendeeStatusFilter] = useState('All');
+  const [attendeeCollectorFilter, setAttendeeCollectorFilter] = useState('All');
   const [csvText, setCsvText] = useState('');
   const [bulkProcessing, setBulkProcessing] = useState(false);
   const [bulkResults, setBulkResults] = useState<any[]>([]);
   const [bulkSummary, setBulkSummary] = useState<any>(null);
   const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(true);
-  const [brandTitle, setBrandTitle] = useState('MIDNIGHT MADNESS');
-  const [brandSubtitle, setBrandSubtitle] = useState('BOLLY TECH // HOUSE PARTY (INVITE ONLY)');
-  const [brandDate, setBrandDate] = useState('12 SEPT 2026');
-  const [brandTime, setBrandTime] = useState('9:00 PM ONWARDS');
-  const [brandVenue, setBrandVenue] = useState('THE HOUSE');
-  const [brandAddress, setBrandAddress] = useState('Invite Only / Shared Upon Confirmation');
+  const [brandTitle, setBrandTitle] = useState('रंगीलो रास 2026');
+  const [brandSubtitle, setBrandSubtitle] = useState('THE BIGGEST GARBA FESTIVAL OF JODHPUR • HOUSE OF CHAOS');
+  const [brandDate, setBrandDate] = useState('18 & 19 OCT 2026');
+  const [brandTime, setBrandTime] = useState('7:00 PM ONWARDS');
+  const [brandVenue, setBrandVenue] = useState('FILOS 24/7');
+  const [brandAddress, setBrandAddress] = useState('Filos 24/7, Jodhpur, Rajasthan');
   const [brandColor, setBrandColor] = useState('pink');
   const [savingBranding, setSavingBranding] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -168,6 +174,7 @@ export default function AdminPage() {
       
       if (data && Array.isArray(data.tickets)) {
         const fullList = data.tickets;
+        setAllTickets(fullList);
         // If Manager (Ankur or Angad), filter stats & recent checkins strictly to their collected tickets
         const list = roleToUse === 'Manager'
           ? fullList.filter((t: any) => t.collected_by === userToUse)
@@ -736,7 +743,7 @@ export default function AdminPage() {
       cleanNumber = '91' + cleanNumber; // Default to India prefix if 10 digits
     }
     
-    const message = `Hey *${generatedTicket.guestName}*! 🎬🍿\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}* at ${brandVenue}, ${brandAddress}.\n\n📅 Date: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Type: *${generatedTicket.ticketType}*\n📍 Venue: *${brandVenue}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the entrance gate for scanning! See you at the movies! 🥂`;
+    const message = `Hey *${generatedTicket.guestName}*! 💃🕺\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${generatedTicket.ticketType}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the gate for scanning! See you at the Garba grounds! 🎉`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
@@ -846,6 +853,96 @@ export default function AdminPage() {
     link.download = `vanguard_bulk_passes_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
   };
+
+  // Attendee Action Handlers
+  const handleResendWhatsApp = (ticket: any) => {
+    let cleanNumber = (ticket.phone || '').replace(/\D/g, '');
+    if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+    const passLink = `${window.location.origin}/?ticket=${ticket.qr_token}`;
+    const message = `Hey *${ticket.name}*! 💃🕺\n\nHere is your official entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${ticket.ticket_type}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
+    window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handleToggleBlacklist = async (ticketId: string, currentBanned: boolean) => {
+    const confirm = window.confirm(currentBanned ? "Un-blacklist guest?" : "Blacklist guest pass? QR code will be blocked at entry.");
+    if (!confirm) return;
+    try {
+      const res = await fetch('/api/tickets/admin-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-blacklist', ticketId, isBanned: !currentBanned })
+      });
+      if (res.ok) fetchMetrics();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId: string, guestName: string) => {
+    const confirm = window.confirm(`Permanently delete pass for ${guestName}? This cannot be undone.`);
+    if (!confirm) return;
+    try {
+      const res = await fetch('/api/tickets/admin-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete-ticket', ticketId })
+      });
+      if (res.ok) fetchMetrics();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleExportAttendeesCSV = () => {
+    if (allTickets.length === 0) return;
+    const headers = ['Guest Name', 'Phone Number', 'Ticket Category', 'Valid Days', 'Payment Method', 'Collected By', 'Check-in Status', 'Day 1 Scanned', 'Day 2 Scanned', 'Ticket ID', 'Pass Link'];
+    const rows = allTickets.map(t => [
+      `"${t.name}"`,
+      `"${t.phone}"`,
+      `"${t.ticket_type}"`,
+      `"${t.valid_days || 'both'}"`,
+      `"${t.payment_method || 'Complimentary'}"`,
+      `"${t.collected_by || 'Super Admin'}"`,
+      `"${t.is_banned ? 'BANNED' : t.is_used ? 'CHECKED IN' : 'REMAINING'}"`,
+      `"${t.day_1_scanned ? 'YES' : 'NO'}"`,
+      `"${t.day_2_scanned ? 'YES' : 'NO'}"`,
+      `"${t.id}"`,
+      `"${window.location.origin}/?ticket=${t.qr_token}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Rangilo_Raas_Attendees_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+  };
+
+  const filteredAttendees = allTickets.filter(t => {
+    const matchesSearch = 
+      (t.name || '').toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+      (t.phone || '').includes(attendeeSearch) ||
+      (t.ticket_type || '').toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+      (t.id || '').toLowerCase().includes(attendeeSearch.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (userRole === 'Manager' && (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi')) {
+      if (t.collected_by !== loggedUser) return false;
+    } else if (attendeeCollectorFilter !== 'All') {
+      if (t.collected_by !== attendeeCollectorFilter) return false;
+    }
+
+    if (attendeeStatusFilter === 'Checked In') return t.is_used;
+    if (attendeeStatusFilter === 'Remaining') return !t.is_used && !t.is_banned;
+    if (attendeeStatusFilter === 'Blacklisted') return t.is_banned;
+    if (attendeeStatusFilter === '2-Day Pass') return t.valid_days === 'both' || (t.ticket_type || '').toLowerCase().includes('2-day');
+    if (attendeeStatusFilter === 'Day 1 Only') return t.valid_days === 'day_1' || (t.ticket_type || '').toLowerCase().includes('day 1');
+    if (attendeeStatusFilter === 'Day 2 Only') return t.valid_days === 'day_2' || (t.ticket_type || '').toLowerCase().includes('day 2');
+    if (attendeeStatusFilter === 'Cash') return t.payment_method === 'Cash';
+    if (attendeeStatusFilter === 'UPI') return t.payment_method === 'UPI' || (t.payment_method || '').includes('UPI');
+
+    return true;
+  });
 
   const percentCheckedIn = stats.totalGuests > 0 
     ? Math.round((stats.checkedIn / stats.totalGuests) * 100) 
@@ -1065,35 +1162,336 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Action Panel Grid */}
-        <div className="grid gap-8 lg:grid-cols-12">
-             {/* Left Form controls */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-1.5 bg-black/40 border border-zinc-900 p-1.5 rounded-2xl">
-              {(userRole === 'Manager' ? ['create', 'tables', 'live'] as const : ['create', 'tables', 'live', 'bulk', 'branding'] as const).map((tab) => (
+        {/* Navigation Tabs Bar */}
+        <div className="flex flex-wrap gap-2 bg-black/60 border border-zinc-900 p-2 rounded-2xl shadow-xl backdrop-blur-md">
+          {(userRole === 'Manager' 
+            ? ['create', 'attendees', 'tables', 'live'] as const 
+            : ['create', 'attendees', 'reports', 'tables', 'live', 'bulk', 'branding'] as const
+          ).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                if (adminScannerOpen) toggleAdminScanner();
+                setActiveTab(tab as any);
+              }}
+              className={`flex-1 min-w-[120px] rounded-xl py-3 px-4 text-xs font-extrabold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeTab === tab
+                  ? `${activeTheme.bg} text-zinc-950 shadow-lg scale-[1.01]`
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+              }`}
+            >
+              {tab === 'create' && '🎟️ CREATE PASS'}
+              {tab === 'attendees' && '👥 ATTENDEE LIST'}
+              {tab === 'reports' && '📊 REPORTS & AUDIT'}
+              {tab === 'tables' && '👑 VIP TABLES'}
+              {tab === 'live' && '⚡ LIVE GATE'}
+              {tab === 'bulk' && '📁 BULK IMPORT'}
+              {tab === 'branding' && '🎨 BRANDING'}
+            </button>
+          ))}
+        </div>
+
+        {/* ATTENDEE LIST FULL WIDTH TAB */}
+        {activeTab === 'attendees' && (
+          <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+              <div>
+                <h3 className="text-lg font-extrabold tracking-wide flex items-center gap-2">
+                  <Users className={`h-5 w-5 ${activeTheme.text}`} />
+                  ATTENDEE DIRECTORY ({filteredAttendees.length} GUESTS)
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1">Search, filter, manage blacklists, resend WhatsApp passes, and export CSV logs</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 items-center">
                 <button
-                  key={tab}
-                  onClick={() => {
-                    if (adminScannerOpen) toggleAdminScanner();
-                    setActiveTab(tab as any);
-                  }}
-                  className={`flex-1 min-w-[100px] rounded-xl py-2.5 text-[11px] font-bold tracking-wider transition-all cursor-pointer ${
-                    activeTab === tab
-                      ? `${activeTheme.bg} text-zinc-950 shadow-md`
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-900/50'
-                  }`}
+                  onClick={handleExportAttendeesCSV}
+                  className="flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-zinc-800 transition-all cursor-pointer"
                 >
-                  {tab === 'create' && 'CREATE PASS'}
-                  {tab === 'tables' && 'VIP TABLES'}
-                  {tab === 'live' && 'LIVE GATE'}
-                  {tab === 'bulk' && 'BULK IMPORT'}
-                  {tab === 'branding' && 'BRANDING'}
+                  <Download className="h-4 w-4 text-emerald-400" />
+                  EXPORT CSV
                 </button>
-              ))}
+              </div>
             </div>
 
+            {/* Search & Filter bar */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                <input
+                  type="text"
+                  placeholder="Search by name, phone, ticket ID..."
+                  value={attendeeSearch}
+                  onChange={(e) => setAttendeeSearch(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-950 border border-zinc-850 pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700"
+                />
+              </div>
+
+              <div>
+                <select
+                  value={attendeeStatusFilter}
+                  onChange={(e) => setAttendeeStatusFilter(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-950 border border-zinc-850 px-3.5 py-2.5 text-xs text-white font-medium focus:outline-none focus:border-zinc-700"
+                >
+                  <option value="All">All Statuses & Types</option>
+                  <option value="Checked In">Checked In Only</option>
+                  <option value="Remaining">Remaining (Not Checked In)</option>
+                  <option value="2-Day Pass">2-Day Season Passes (18 & 19 Oct)</option>
+                  <option value="Day 1 Only">Day 1 Passes (18 Oct Only)</option>
+                  <option value="Day 2 Only">Day 2 Passes (19 Oct Only)</option>
+                  <option value="Cash">Cash Payments</option>
+                  <option value="UPI">UPI / Online Payments</option>
+                  <option value="Blacklisted">Blacklisted Guests</option>
+                </select>
+              </div>
+
+              <div>
+                <select
+                  value={attendeeCollectorFilter}
+                  onChange={(e) => setAttendeeCollectorFilter(e.target.value)}
+                  className="w-full rounded-xl bg-zinc-950 border border-zinc-850 px-3.5 py-2.5 text-xs text-white font-medium focus:outline-none focus:border-zinc-700"
+                >
+                  <option value="All">All Collectors</option>
+                  <option value="Ankur Bishnoi">Ankur Bishnoi</option>
+                  <option value="Angad Bishnoi">Angad Bishnoi</option>
+                  <option value="House of Chaos">House of Chaos</option>
+                  <option value="Super Admin">Super Admin</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Attendees Table */}
+            <div className="overflow-x-auto rounded-2xl border border-zinc-900 bg-zinc-950/60">
+              <table className="w-full text-left text-xs text-zinc-300">
+                <thead className="bg-zinc-900/80 text-[10px] uppercase font-bold tracking-wider text-zinc-400 border-b border-zinc-850">
+                  <tr>
+                    <th className="p-3.5">Guest Name / Phone</th>
+                    <th className="p-3.5">Category</th>
+                    <th className="p-3.5">Valid Days</th>
+                    <th className="p-3.5">Payment</th>
+                    <th className="p-3.5">Collector</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900/60 font-medium">
+                  {filteredAttendees.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-8 text-zinc-500 text-xs">
+                        No matching attendees found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAttendees.map((t) => (
+                      <tr key={t.id} className="hover:bg-zinc-900/40 transition">
+                        <td className="p-3.5">
+                          <div className="font-bold text-white text-sm">{t.name}</div>
+                          <div className="text-[11px] text-zinc-500">{t.phone}</div>
+                        </td>
+                        <td className="p-3.5">
+                          <span className="inline-block px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-semibold text-zinc-300">
+                            {t.ticket_type}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-[11px]">
+                          {t.valid_days === 'day_1' ? (
+                            <span className="text-amber-400 font-semibold">18 Oct (Day 1)</span>
+                          ) : t.valid_days === 'day_2' ? (
+                            <span className="text-cyan-400 font-semibold">19 Oct (Day 2)</span>
+                          ) : (
+                            <span className="text-emerald-400 font-semibold">2-Day Pass (18 & 19 Oct)</span>
+                          )}
+                        </td>
+                        <td className="p-3.5">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                            t.payment_method === 'Cash' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            t.payment_method?.includes('UPI') ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                            'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                          }`}>
+                            {t.payment_method || 'Complimentary'}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-[11px] text-zinc-400 font-medium">
+                          {t.collected_by || 'Super Admin'}
+                        </td>
+                        <td className="p-3.5">
+                          {t.is_banned ? (
+                            <span className="px-2 py-0.5 rounded bg-red-950/80 border border-red-800 text-red-400 text-[10px] font-extrabold">BANNED</span>
+                          ) : t.is_used ? (
+                            <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-[10px] font-extrabold">CHECKED IN</span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 text-[10px] font-semibold">REMAINING</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleResendWhatsApp(t)}
+                              title="Send Pass on WhatsApp"
+                              className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-black transition"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                const passLink = `${window.location.origin}/?ticket=${t.qr_token}`;
+                                navigator.clipboard.writeText(passLink);
+                                alert('Pass link copied to clipboard!');
+                              }}
+                              title="Copy Pass Link"
+                              className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleBlacklist(t.id, t.is_banned)}
+                              title={t.is_banned ? "Un-blacklist Guest" : "Blacklist Guest"}
+                              className={`p-1.5 rounded-lg border transition ${
+                                t.is_banned 
+                                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black'
+                                  : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white'
+                              }`}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTicket(t.id, t.name)}
+                              title="Delete Ticket"
+                              className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-red-400 hover:border-red-800 transition"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* REPORTS & FINANCIAL AUDIT FULL WIDTH TAB */}
+        {activeTab === 'reports' && (
+          <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl space-y-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+              <div>
+                <h3 className="text-lg font-extrabold tracking-wide flex items-center gap-2 uppercase">
+                  <BarChart3 className={`h-5 w-5 ${activeTheme.text}`} />
+                  Rangilo Raas 2026 — Executive Reports & Financial Audit
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1">Complete financial logs, daily gate attendance velocity, and promoter collection audit</p>
+              </div>
+
+              <button
+                onClick={handleExportAttendeesCSV}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-extrabold text-black hover:brightness-110 transition-all cursor-pointer shadow-lg"
+              >
+                <Download className="h-4 w-4" />
+                DOWNLOAD FULL AUDIT REPORT (CSV)
+              </button>
+            </div>
+
+            {/* Gate Attendance Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="rounded-2xl bg-zinc-950 border border-zinc-850 p-5 space-y-2">
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">Day 1 Gate Velocity (18 Oct)</span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-3xl font-black text-white">
+                    {allTickets.filter(t => t.day_1_scanned || (t.is_used && (t.valid_days === 'day_1' || t.valid_days === 'both'))).length}
+                  </span>
+                  <span className="text-xs text-zinc-500 font-medium">
+                    / {allTickets.filter(t => t.valid_days === 'both' || t.valid_days === 'day_1').length} Valid Passes
+                  </span>
+                </div>
+                <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-amber-400" 
+                    style={{ 
+                      width: `${Math.round((allTickets.filter(t => t.day_1_scanned).length / Math.max(1, allTickets.filter(t => t.valid_days === 'both' || t.valid_days === 'day_1').length)) * 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-zinc-950 border border-zinc-850 p-5 space-y-2">
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">Day 2 Gate Velocity (19 Oct)</span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-3xl font-black text-white">
+                    {allTickets.filter(t => t.day_2_scanned || (t.is_used && t.valid_days === 'day_2')).length}
+                  </span>
+                  <span className="text-xs text-zinc-500 font-medium">
+                    / {allTickets.filter(t => t.valid_days === 'both' || t.valid_days === 'day_2').length} Valid Passes
+                  </span>
+                </div>
+                <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-cyan-400" 
+                    style={{ 
+                      width: `${Math.round((allTickets.filter(t => t.day_2_scanned).length / Math.max(1, allTickets.filter(t => t.valid_days === 'both' || t.valid_days === 'day_2').length)) * 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-zinc-950 border border-zinc-850 p-5 space-y-2">
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block font-semibold">Total Registered Revenue Count</span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-3xl font-black text-white">{allTickets.length} Passes</span>
+                  <span className="text-xs text-emerald-400 font-bold">100% Verified</span>
+                </div>
+                <div className="text-[11px] text-zinc-400 pt-1 flex justify-between">
+                  <span>Cash: {revenueSummary.cashTotal}</span>
+                  <span>UPI: {revenueSummary.upiTotal}</span>
+                  <span>Comp: {revenueSummary.compTotal}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Collector Financial Audit Table */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-extrabold uppercase tracking-wider text-zinc-300">Promoter & Staff Cash / UPI Collection Audit</h4>
+              <div className="overflow-x-auto rounded-2xl border border-zinc-900 bg-zinc-950/80">
+                <table className="w-full text-left text-xs text-zinc-300">
+                  <thead className="bg-zinc-900 text-[10px] uppercase font-bold text-zinc-400 border-b border-zinc-850">
+                    <tr>
+                      <th className="p-3.5">Collector Name</th>
+                      <th className="p-3.5 text-center">Cash Passes</th>
+                      <th className="p-3.5 text-center">UPI / Online</th>
+                      <th className="p-3.5 text-center">Complimentary</th>
+                      <th className="p-3.5 text-right">Total Issued</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-900 font-medium">
+                    {Object.keys(revenueSummary.byCollector).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-zinc-500">No collection data recorded yet.</td>
+                      </tr>
+                    ) : (
+                      Object.entries(revenueSummary.byCollector).map(([collector, counts]) => (
+                        <tr key={collector} className="hover:bg-zinc-900/30">
+                          <td className="p-3.5 font-bold text-white flex items-center gap-2">
+                            👤 {collector}
+                          </td>
+                          <td className="p-3.5 text-center text-emerald-400 font-bold">{counts.cash}</td>
+                          <td className="p-3.5 text-center text-cyan-400 font-bold">{counts.upi}</td>
+                          <td className="p-3.5 text-center text-purple-400 font-bold">{counts.comp}</td>
+                          <td className="p-3.5 text-right font-extrabold text-white text-sm">{counts.total}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Panel Grid */}
+        <div className="grid gap-8 lg:grid-cols-12">
+          {/* Left Form controls */}
+          <div className="lg:col-span-7 space-y-6">
             {activeTab === 'create' && (
               <div className="glass-panel rounded-3xl p-6 border border-zinc-900 shadow-xl">
                 <div className="flex items-center gap-2 border-b border-zinc-850 pb-4 mb-6">
@@ -1858,7 +2256,7 @@ export default function AdminPage() {
             <div className="footer-brand">
               <a href="#" className="cursor-pointer">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/madsphere_logo.png" alt="MadSphere" className="h-9 object-contain" />
+                <img src="/IMG_3217.PNG" alt="Rangilo Raas 2026 Logo" className="h-12 object-contain" />
               </a>
             </div>
             

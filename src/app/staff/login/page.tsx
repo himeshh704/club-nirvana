@@ -105,8 +105,8 @@ export default function StaffLoginPage() {
         {/* Brand */}
         <div className="flex flex-col items-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-8 object-contain mb-2" />
-          <span className="text-[10px] font-semibold tracking-[0.35em] text-zinc-500 uppercase">GATE CONTROL PORTAL</span>
+          <img src="/IMG_3217.PNG" alt="Rangilo Raas 2026 Logo" className="h-16 object-contain mb-2 drop-shadow-[0_0_15px_rgba(225,29,72,0.6)]" />
+          <span className="text-[10px] font-semibold tracking-[0.35em] text-zinc-500 uppercase">RANGILO RAAS 2026 • GATE CONTROL</span>
         </div>
 
         {/* Login Form Panel */}

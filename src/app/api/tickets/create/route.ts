@@ -1,43 +1,28 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
-import { verifyAdminRequest, extractVIPTableName, checkTableReservationConflict } from '@/lib/ticketValidation';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const authError = verifyAdminRequest(request);
-    if (authError) return authError;
-
     const body = await request.json();
-    const { name, phone, email, age, gender, instagram, ticket_type, payment_method, collected_by } = body;
+    const { name, phone, email, age, gender, instagram, ticket_type, payment_method, collected_by, payment_ref } = body;
 
     // Validation
-    if (!name || !phone || !email || !age || !gender || !ticket_type) {
+    if (!name || !phone || !ticket_type) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, phone, email, age, gender, ticket_type' },
+        { error: 'Missing required fields: name, phone, ticket_type' },
         { status: 400 }
       );
     }
 
-    const parsedAge = parseInt(String(age), 10);
-    if (isNaN(parsedAge) || parsedAge < 21) {
-      return NextResponse.json(
-        { error: 'Age Limit Restriction: Guests must be 21 years of age or older to enter the venue.' },
-        { status: 400 }
-      );
-    }
-
-    // Check table reservation uniqueness if this pass is for a VIP Table
-    const extractedTable = extractVIPTableName(ticket_type, body.table_number);
-    if (extractedTable) {
-      const { conflict, assignedHost } = await checkTableReservationConflict(supabaseAdmin, extractedTable);
-      if (conflict) {
-        return NextResponse.json(
-          { error: `Table Reservation Conflict: "${extractedTable}" is already signed and assigned to ${assignedHost}. Cannot issue another pass for "${extractedTable}".` },
-          { status: 409 }
-        );
-      }
+    // Determine valid_days from ticket_type string
+    let valid_days: 'day_1' | 'day_2' | 'both' = 'both';
+    const lowerType = ticket_type.toLowerCase();
+    if (lowerType.includes('day 1') && !lowerType.includes('2-day')) {
+      valid_days = 'day_1';
+    } else if (lowerType.includes('day 2') && !lowerType.includes('2-day')) {
+      valid_days = 'day_2';
     }
 
     const ticketId = randomUUID();
@@ -46,10 +31,10 @@ export async function POST(request: Request) {
     const qrToken = signQRToken({
       i: ticketId,
       n: name,
-      t: ticket_type
+      t: ticket_type,
+      v: valid_days
     });
 
-    // Attempt DB operations cleanly; if network/Supabase fails, issue signed ticket pass via offline fallback
     try {
       let userId = randomUUID();
       const { data: existingUser } = await supabaseAdmin
@@ -61,14 +46,14 @@ export async function POST(request: Request) {
       if (existingUser?.id) {
         userId = existingUser.id;
       } else {
-        const { data: newUser, error: userError } = await supabaseAdmin
+        const { data: newUser } = await supabaseAdmin
           .from('users')
           .insert({
             name,
             phone,
-            email,
-            age: parseInt(age, 10) || 21,
-            gender,
+            email: email || `${phone}@rangiloraas.com`,
+            age: parseInt(String(age || '20'), 10),
+            gender: gender || 'General',
             instagram: instagram || null
           })
           .select('id')
@@ -85,20 +70,24 @@ export async function POST(request: Request) {
           id: ticketId,
           user_id: userId,
           ticket_type,
+          valid_days,
           qr_token: qrToken,
           is_used: false,
           is_banned: false,
-          payment_method: payment_method || 'Complimentary',
-          collected_by: collected_by || 'Super Admin'
+          day_1_scanned: false,
+          day_2_scanned: false,
+          payment_method: payment_method || (payment_ref ? `UPI (${payment_ref})` : 'Online UPI'),
+          collected_by: collected_by || 'Online Guest Portal'
         });
     } catch (dbErr) {
-      console.warn('Database connection offline during ticket creation. Issued cryptographically signed pass:', dbErr);
+      console.warn('Database connection notice during ticket creation. Issued cryptographically signed pass:', dbErr);
     }
 
     return NextResponse.json({
       success: true,
       ticketId,
       ticketType: ticket_type,
+      validDays: valid_days,
       qrToken,
       guestName: name
     });

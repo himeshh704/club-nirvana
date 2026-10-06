@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Compass, 
-  Search, 
-  Download, 
-  ArrowLeft, 
-  UserX, 
-  UserCheck, 
-  Trash2, 
-  Copy, 
+import {
+  Compass,
+  Search,
+  Download,
+  ArrowLeft,
+  UserX,
+  UserCheck,
+  Trash2,
+  Copy,
   Check,
   RefreshCcw,
   AlertOctagon,
@@ -48,10 +48,10 @@ export default function AttendeeDirectory() {
 
   // Dynamic branding settings for WhatsApp share message text
   const [eventSettings, setEventSettings] = useState({
-    title: 'MIDNIGHT MADNESS',
-    subtitle: 'BOLLY TECH // HOUSE PARTY (INVITE ONLY)',
-    venue: 'THE HOUSE',
-    address: 'Invite Only / Shared Upon Confirmation'
+    title: 'RANGILO RAAS 2026',
+    subtitle: 'THE BIGGEST GARBA FESTIVAL OF JODHPUR • HOUSE OF CHAOS',
+    venue: 'FILOS 24/7',
+    address: 'Filos 24/7, Jodhpur, Rajasthan'
   });
 
   const fetchAttendees = async () => {
@@ -75,18 +75,18 @@ export default function AttendeeDirectory() {
     const auth = localStorage.getItem('staff_authenticated');
     const role = localStorage.getItem('staff_role') || 'Admin';
     const user = localStorage.getItem('staff_user') || 'Super Admin';
-    
+
     if (auth !== 'true') {
       router.push('/staff/login');
       return;
     }
-    
+
     // Strict Route-Level Security: Only Admin role can access Attendee Directory
     if (role !== 'Admin') {
       router.push('/admin');
       return;
     }
-    
+
     setAuthorized(true);
     setUserRole(role);
     setLoggedUser(user);
@@ -127,11 +127,11 @@ export default function AttendeeDirectory() {
       return false;
     }
 
-    const matchesSearch = 
+    const matchesSearch =
       item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.phone.includes(search) ||
       item.id.toLowerCase().includes(search.toLowerCase());
-    
+
     if (filterType === 'All') return matchesSearch;
     if (filterType === 'Checked In') return matchesSearch && item.is_used;
     if (filterType === 'Remaining') return matchesSearch && !item.is_used;
@@ -144,8 +144,8 @@ export default function AttendeeDirectory() {
   // Action: Toggle Blacklist
   const handleToggleBlacklist = async (ticketId: string, currentBanned: boolean) => {
     const confirmation = window.confirm(
-      currentBanned 
-        ? "Revoke blacklist? This guest will be allowed entry again." 
+      currentBanned
+        ? "Revoke blacklist? This guest will be allowed entry again."
         : "Blacklist this guest? Access QR scans will be immediately blocked."
     );
     if (!confirmation) return;
@@ -253,9 +253,9 @@ export default function AttendeeDirectory() {
       a.is_banned ? 'YES' : 'NO'
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
+    const csvContent = "data:text/csv;charset=utf-8,"
       + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -311,7 +311,7 @@ export default function AttendeeDirectory() {
 
       {/* Main Panel */}
       <main className="mx-auto max-w-6xl px-6 py-10 space-y-6">
-        
+
         {/* Filters and Search Bar */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           {/* Search Box */}
@@ -358,17 +358,16 @@ export default function AttendeeDirectory() {
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
-                className={`rounded-xl px-4 py-2.5 text-xs font-semibold border transition-all ${
-                  filterType === type 
-                    ? 'bg-purple-600 border-purple-600 text-white' 
+                className={`rounded-xl px-4 py-2.5 text-xs font-semibold border transition-all ${filterType === type
+                    ? 'bg-purple-600 border-purple-600 text-white'
                     : 'bg-zinc-950 border-zinc-900 text-zinc-400 hover:text-white'
-                }`}
+                  }`}
               >
                 {type}
               </button>
             ))}
-            
-            <button 
+
+            <button
               onClick={fetchAttendees}
               className="rounded-xl bg-zinc-950 border border-zinc-900 p-2.5 text-zinc-400 hover:text-white"
             >
@@ -418,14 +417,13 @@ export default function AttendeeDirectory() {
                           <span>{attendee.email}</span>
                         </div>
                       </td>
-                      
+
                       {/* Ticket Type */}
                       <td className="py-4 px-4">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border font-medium ${
-                          attendee.ticket_type.toLowerCase().includes('table') ? 'border-amber-500/60 text-amber-300 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.25)] font-bold' :
-                          attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' ? 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/5' : 
-                          attendee.ticket_type === 'Couple' ? 'border-pink-500/30 text-pink-400' : 'border-zinc-800 text-zinc-400'
-                        }`}>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border font-medium ${attendee.ticket_type.toLowerCase().includes('table') ? 'border-amber-500/60 text-amber-300 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.25)] font-bold' :
+                            attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' ? 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/5' :
+                              attendee.ticket_type === 'Couple' ? 'border-pink-500/30 text-pink-400' : 'border-zinc-800 text-zinc-400'
+                          }`}>
                           {(attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' || attendee.ticket_type.toLowerCase().includes('table')) && <Sparkles className="h-3 w-3 text-[#cca43b]" />}
                           {attendee.ticket_type}
                         </span>
@@ -434,11 +432,10 @@ export default function AttendeeDirectory() {
                       {/* Payment & Collector */}
                       <td className="py-4 px-4">
                         <div className="space-y-1">
-                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase border ${
-                            attendee.payment_method === 'Cash' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-                            attendee.payment_method === 'UPI' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' :
-                            'bg-purple-500/10 border-purple-500/30 text-purple-400'
-                          }`}>
+                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase border ${attendee.payment_method === 'Cash' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                              attendee.payment_method === 'UPI' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' :
+                                'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                            }`}>
                             {attendee.payment_method || 'Complimentary'}
                           </span>
                           <div className="text-[11px] text-zinc-400 font-medium flex items-center gap-1">
@@ -446,7 +443,7 @@ export default function AttendeeDirectory() {
                           </div>
                         </div>
                       </td>
- 
+
                       {/* URL Sharing */}
                       <td className="py-4 px-4">
                         <div className="flex flex-col gap-2 items-start justify-start">
@@ -466,7 +463,7 @@ export default function AttendeeDirectory() {
                               </>
                             )}
                           </button>
- 
+
                           <button
                             onClick={() => handleSendWhatsApp(attendee.name, attendee.phone, attendee.qr_token, attendee.ticket_type)}
                             className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
@@ -476,7 +473,7 @@ export default function AttendeeDirectory() {
                           </button>
                         </div>
                       </td>
- 
+
                       {/* Entry Status */}
                       <td className="py-4 px-4">
                         {attendee.is_banned ? (
@@ -498,38 +495,36 @@ export default function AttendeeDirectory() {
                           </span>
                         )}
                       </td>
- 
+
                       {/* Admin Controls */}
                       <td className="py-4 px-6 text-right min-w-[150px]">
                         <div className="flex gap-2 justify-end">
-                          
+
                           {/* Force check-in button toggle */}
                           <button
                             onClick={() => handleToggleCheckin(attendee.id, attendee.is_used)}
                             disabled={attendee.is_banned}
-                            className={`rounded-lg p-2 border transition-all cursor-pointer ${
-                              attendee.is_used 
-                                ? 'bg-zinc-950 border-zinc-900 text-zinc-500 hover:text-white' 
+                            className={`rounded-lg p-2 border transition-all cursor-pointer ${attendee.is_used
+                                ? 'bg-zinc-950 border-zinc-900 text-zinc-500 hover:text-white'
                                 : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'
-                            }`}
+                              }`}
                             title={attendee.is_used ? "Cancel check-in override" : "Force manual check-in override"}
                           >
                             <UserCheck className="h-4 w-4" />
                           </button>
- 
+
                           {/* Blacklist toggle */}
                           <button
                             onClick={() => handleToggleBlacklist(attendee.id, attendee.is_banned)}
-                            className={`rounded-lg p-2 border transition-all cursor-pointer ${
-                              attendee.is_banned 
-                                ? 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25' 
+                            className={`rounded-lg p-2 border transition-all cursor-pointer ${attendee.is_banned
+                                ? 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25'
                                 : 'bg-zinc-950 border-zinc-900 text-zinc-500 hover:text-red-400'
-                            }`}
+                              }`}
                             title={attendee.is_banned ? "Remove from blacklist" : "Add to event blacklist"}
                           >
                             <UserX className="h-4 w-4" />
                           </button>
- 
+
                           {/* Revoke/Delete */}
                           <button
                             onClick={() => handleDeleteTicket(attendee.id)}
@@ -562,10 +557,10 @@ export default function AttendeeDirectory() {
             <div className="footer-brand">
               <a href="#" className="cursor-pointer">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/madsphere_logo.png" alt="MadSphere" className="h-9 object-contain" />
+                <img src="/IMG_3217.PNG" alt="Rangilo Raas 2026 Logo" className="h-12 object-contain" />
               </a>
             </div>
-            
+
             <div className="text-center md:text-left">
               <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-3">Connect</div>
               <ul className="space-y-2 text-xs uppercase tracking-wider">

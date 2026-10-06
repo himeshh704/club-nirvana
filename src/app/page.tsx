@@ -7,25 +7,28 @@ import {
   Clock, 
   MapPin, 
   Sparkles, 
-  Download, 
   Copy, 
   Check, 
-  ShieldCheck, 
   Phone,
   QrCode,
-  Compass
+  Share2,
+  Ticket,
+  User,
+  Zap,
+  Send,
+  ShieldCheck,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
 
-// Wrap the main guest content in Suspense for Next.js SearchParams compatibility
 export default function GuestPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-[#060608] text-white">
-        <div className="relative">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-red-600 border-t-transparent"></div>
-          <div className="mt-4 text-sm tracking-widest text-zinc-400">LOADING PASS PORTAL...</div>
+      <div className="flex h-screen items-center justify-center bg-[#070210] text-white">
+        <div className="relative text-center">
+          <div className="h-14 w-14 animate-spin rounded-full border-4 border-red-600 border-t-transparent mx-auto"></div>
+          <div className="mt-4 text-xs font-bold tracking-widest text-red-400">LOADING RANGILO RAAS...</div>
         </div>
       </div>
     }>
@@ -34,469 +37,379 @@ export default function GuestPage() {
   );
 }
 
-interface DecodedToken {
-  ticketId: string;
-  userId: string;
-  ticketType: string;
-  name: string;
-  createdAt: string;
-}
-
 function GuestPageContent() {
   const searchParams = useSearchParams();
   const ticketToken = searchParams.get('ticket');
-  
+
+  // Form State for Ticket Generation
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [passCategory, setPassCategory] = useState('2-Day Pass - Couple (Phase 1)');
+  const [genderCategory, setGenderCategory] = useState('Couple');
+  const [collectedBy, setCollectedBy] = useState('House of Chaos');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+
+  // Generation & View State
+  const [generatedToken, setGeneratedToken] = useState<string | null>(ticketToken);
   const [qrUrl, setQrUrl] = useState<string>('');
-  const [copied, setCopied] = useState<boolean>(false);
-  const [ticketData, setTicketData] = useState<DecodedToken | null>(null);
-  const [tokenError, setTokenError] = useState<boolean>(false);
-  const ticketRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  const [ticketData, setTicketData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recentGeneratedTicket, setRecentGeneratedTicket] = useState<any>(null);
 
-  const [eventSettings, setEventSettings] = useState({
-    title: "MIDNIGHT MADNESS",
-    subtitle: "BOLLY TECH // HOUSE PARTY (INVITE ONLY)",
-    date: "12 SEPT 2026",
-    time: "9:00 PM ONWARDS",
-    venue: "THE HOUSE",
-    address: "Invite Only / Shared Upon Confirmation",
-    accent_color: "pink",
-    lineup_artist: "MIDNIGHT MADNESS",
-    lineup_genre: "NONSTOP MUSIC. ZERO REGRETS.",
-    support_artist: "BOLLY TECH",
-    support_genre: "Early Bird Pass ₹1000 (First 3 Girls FREE)"
-  });
-
-  // Fetch dynamic branding/event configurations
+  // Parse and generate QR code whenever token is present
   useEffect(() => {
-    fetch('/api/event/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.title) {
-          setEventSettings(data);
-        }
-      })
-      .catch(err => console.error('Failed to load branding configurations:', err));
-  }, []);
+    const activeToken = generatedToken || ticketToken;
+    if (activeToken) {
+      QRCode.toDataURL(activeToken, { width: 350, margin: 2, color: { dark: '#000000', light: '#ffffff' } })
+        .then(url => setQrUrl(url))
+        .catch(err => console.error('QR generation error:', err));
 
-  // Parse token client-side (Base64 decode JWT payload without validation just for UI display,
-  // the server will validate cryptographically upon actual scan check-in)
-  useEffect(() => {
-    if (ticketToken) {
       try {
-        const parts = ticketToken.split('.');
+        const parts = activeToken.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-          const ticketId = payload.i || payload.ticketId;
-          const name = payload.n || payload.name || 'Valued Guest';
-          const ticketType = payload.t || payload.ticketType || 'Regular';
-          
           setTicketData({
-            ticketId,
-            userId: payload.userId || '',
-            ticketType,
-            name,
-            createdAt: payload.createdAt || ''
+            ticketId: payload.i,
+            name: payload.n || 'Valued Guest',
+            ticketType: payload.t || 'Rangilo Raas Pass',
+            validDays: payload.v || 'both'
           });
-
-          // Generate QR code URL (Level L error correction minimizes density/dot count for instant scanning)
-          QRCode.toDataURL(ticketToken, {
-            errorCorrectionLevel: 'L',
-            margin: 2,
-            color: {
-              dark: '#000000',
-              light: '#ffffff'
-            }
-          }).then(url => {
-            setQrUrl(url);
-          });
-        } else {
-          setTokenError(true);
         }
-      } catch (err) {
-        console.error('Failed to parse ticket token:', err);
-        setTokenError(true);
-      }
+      } catch (_) {}
     }
-  }, [ticketToken]);
+  }, [generatedToken, ticketToken]);
 
-  // Copy Ticket Link
-  const handleCopyLink = () => {
-    if (ticketToken) {
-      const passUrl = `${window.location.origin}/?ticket=${ticketToken}`;
-      navigator.clipboard.writeText(passUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  // Handle Pass Generation & WhatsApp Dispatch
+  const handleGeneratePass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName || !guestPhone) {
+      alert('Please enter Guest Name and Phone Number.');
+      return;
     }
-  };
 
-  // Download or Share Ticket Pass image
-  const handleDownload = async () => {
-    if (!ticketData || !qrUrl) return;
-    
+    setIsSubmitting(true);
     try {
-      const byteString = atob(qrUrl.split(',')[1]);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([ab], { type: 'image/png' });
-      const filename = `movie-pass-${ticketData.name.toLowerCase().replace(/\s+/g, '-')}.png`;
-      const file = new File([blob], filename, { type: 'image/png' });
-      
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `${eventSettings.title} Pass`,
-          text: `My entrance pass for ${eventSettings.title} - ${eventSettings.subtitle}!`
-        });
+      const res = await fetch('/api/tickets/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: guestName,
+          phone: guestPhone,
+          gender: genderCategory,
+          ticket_type: passCategory,
+          payment_method: paymentMethod,
+          collected_by: collectedBy
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.qrToken) {
+        const passLinkUrl = `${window.location.origin}/?ticket=${data.qrToken}`;
+        
+        const ticketInfo = {
+          guestName,
+          guestPhone,
+          ticketType: passCategory,
+          qrToken: data.qrToken,
+          passLinkUrl
+        };
+
+        setRecentGeneratedTicket(ticketInfo);
+        setGeneratedToken(data.qrToken);
+
+        // Construct WhatsApp Share Message
+        let cleanNumber = guestPhone.replace(/\D/g, '');
+        if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+
+        const message = `Hey *${guestName}*! 💃🕺\n\nHere is your official Entry Pass for *RANGILO RAAS 2026* (Organized by *House of Chaos*)!\n\n📅 Dates: *18 & 19 OCT 2026*\n⏰ Time: *7:00 PM ONWARDS*\n🎟️ Pass Category: *${passCategory}*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nYour Pass Link: ${passLinkUrl}\n\nPlease show this QR code at the entrance gate for scanning! See you at the Garba grounds! 🎉`;
+
+        const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+
+        // Reset inputs
+        setGuestName('');
+        setGuestPhone('');
       } else {
-        const link = document.createElement('a');
-        link.href = qrUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        alert(data.error || 'Failed to generate ticket pass.');
       }
-    } catch (error) {
-      console.error('Error sharing pass:', error);
-      window.print();
+    } catch (err) {
+      console.error('Error issuing ticket:', err);
+      alert('Network error while issuing pass.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Dynamic theme configurations mapping
-  const themeMap: Record<string, { 
-    text: string; 
-    border: string; 
-    borderPulse: string; 
-    glow: string; 
-    badge: string; 
-    topGrad: string;
-    bg: string;
-    hoverBg: string;
-  }> = {
-    red: {
-      text: 'text-red-500',
-      border: 'border-red-500/40',
-      borderPulse: 'shadow-[0_0_15px_rgba(239,68,68,0.3)] border-red-500/40',
-      glow: 'bg-red-600',
-      badge: 'border-red-500 text-red-300 bg-red-950/30',
-      topGrad: 'from-amber-400 via-red-600 to-rose-900',
-      bg: 'bg-red-600',
-      hoverBg: 'hover:bg-red-500'
-    },
-    gold: {
-      text: 'text-[#cca43b]',
-      border: 'border-[#cca43b]/40',
-      borderPulse: 'shadow-[0_0_15px_rgba(204,164,59,0.2)] border-[#cca43b]/40',
-      glow: 'bg-[#cca43b]',
-      badge: 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/10',
-      topGrad: 'from-amber-200 via-[#cca43b] to-amber-700',
-      bg: 'bg-[#cca43b]',
-      hoverBg: 'hover:bg-[#ffe082]'
-    },
-    pink: {
-      text: 'text-pink-400',
-      border: 'border-pink-500/40',
-      borderPulse: 'shadow-[0_0_15px_rgba(236,72,153,0.2)] border-pink-500/35',
-      glow: 'bg-pink-500',
-      badge: 'border-pink-500 text-pink-300 bg-pink-950/20',
-      topGrad: 'from-pink-300 via-pink-500 to-rose-700',
-      bg: 'bg-pink-600',
-      hoverBg: 'hover:bg-pink-500'
-    },
-    purple: {
-      text: 'text-purple-400',
-      border: 'border-purple-500/40',
-      borderPulse: 'shadow-[0_0_15px_rgba(168,85,247,0.2)] border-purple-500/35',
-      glow: 'bg-purple-500',
-      badge: 'border-purple-500 text-purple-300 bg-purple-950/20',
-      topGrad: 'from-violet-300 via-purple-500 to-fuchsia-700',
-      bg: 'bg-purple-600',
-      hoverBg: 'hover:bg-purple-500'
-    },
-    emerald: {
-      text: 'text-emerald-400',
-      border: 'border-emerald-500/40',
-      borderPulse: 'shadow-[0_0_15px_rgba(16,185,129,0.2)] border-emerald-500/35',
-      glow: 'bg-emerald-500',
-      badge: 'border-emerald-500 text-emerald-300 bg-emerald-950/20',
-      topGrad: 'from-teal-300 via-emerald-500 to-emerald-700',
-      bg: 'bg-emerald-600',
-      hoverBg: 'hover:bg-emerald-500'
-    },
-    blue: {
-      text: 'text-blue-400',
-      border: 'border-blue-500/40',
-      borderPulse: 'shadow-[0_0_15px_rgba(59,130,246,0.2)] border-blue-500/35',
-      glow: 'bg-blue-500',
-      badge: 'border-blue-500 text-blue-300 bg-blue-950/20',
-      topGrad: 'from-cyan-300 via-blue-500 to-indigo-700',
-      bg: 'bg-blue-600',
-      hoverBg: 'hover:bg-blue-500'
-    }
+  const copyLink = () => {
+    const activeToken = generatedToken || ticketToken;
+    const url = window.location.origin + '?ticket=' + activeToken;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const effectiveColor = (eventSettings.accent_color === 'gold' || !eventSettings.accent_color) ? 'red' : eventSettings.accent_color;
-  const currentTheme = themeMap[effectiveColor] || themeMap.red;
+  const shareWhatsAppAgain = () => {
+    const activeToken = generatedToken || ticketToken;
+    const name = ticketData?.name || recentGeneratedTicket?.guestName || 'Guest';
+    const type = ticketData?.ticketType || recentGeneratedTicket?.ticketType || 'Rangilo Raas Pass';
+    const phoneNum = recentGeneratedTicket?.guestPhone || '';
+    let cleanNumber = phoneNum.replace(/\D/g, '');
+    if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
 
-  // RENDER TICKET VIEW
-  if (ticketToken && ticketData) {
-    const isVIP = ticketData.ticketType.includes('VIP');
-    const isTable = ticketData.ticketType.includes('Table');
-    const isCouple = ticketData.ticketType.includes('Couple');
+    const url = window.location.origin + '?ticket=' + activeToken;
+    const message = `Hey *${name}*! 💃🕺\n\nHere is your Entry Pass for *RANGILO RAAS 2026* (House of Chaos)!\n\n🎟️ Category: *${type}*\n📅 Dates: *18 & 19 OCT 2026*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nPass Link: ${url}`;
     
-    let typeBadgeColor = 'border-zinc-500 text-zinc-300 bg-zinc-950/40';
-    let typeBorderGlow = '';
-    
-    if (isTable) {
-      typeBadgeColor = 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/20 font-extrabold shadow-[0_0_15px_rgba(204,164,59,0.3)]';
-      typeBorderGlow = 'shadow-[0_0_25px_rgba(204,164,59,0.3)] border-[#cca43b]/60';
-    } else if (isVIP) {
-      typeBadgeColor = currentTheme.badge;
-      typeBorderGlow = currentTheme.borderPulse;
-    } else if (isCouple) {
-      typeBadgeColor = 'border-pink-500 text-pink-300 bg-pink-950/20';
-      typeBorderGlow = 'shadow-[0_0_15px_rgba(236,72,153,0.15)] border-pink-500/30';
-    } else {
-      typeBorderGlow = `border-zinc-800 hover:${currentTheme.border} transition-colors`;
-    }
+    const waUrl = cleanNumber ? `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}` : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank');
+  };
 
+  // IF VIEWING A PASS (e.g. opened via WhatsApp ticket link or just generated)
+  if (generatedToken || ticketToken) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#060608] px-4 py-12 text-white print:bg-white print:text-black">
-        {/* Glow Effects in background */}
-        <div className={`absolute top-1/4 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full ${currentTheme.glow} opacity-10 blur-[100px] print:hidden`}></div>
+      <div className="min-h-screen bg-[#090212] text-white selection:bg-red-600 selection:text-white pb-12">
+        <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-red-600/20 blur-[140px] rounded-full"></div>
+          <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-amber-600/15 blur-[120px] rounded-full"></div>
+        </div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="w-full max-w-md print:max-w-full"
-        >
-          {/* Header */}
-          <div className="mb-6 text-center print:hidden">
-            <h2 className={`text-xs font-semibold tracking-[0.3em] ${currentTheme.text}`}>YOUR ENTRY PASS</h2>
-            <h1 className="mt-1 text-2xl font-bold tracking-wider text-white">{eventSettings.title}</h1>
+        <div className="relative z-10 max-w-md mx-auto px-4 pt-6">
+          <div className="text-center mb-4">
+            {/* Official Calligraphy Logo */}
+            <img 
+              src="/IMG_3217.PNG" 
+              alt="रंगीलो रास Logo" 
+              className="h-28 mx-auto object-contain drop-shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+            />
+            <p className="text-[11px] font-black text-amber-400 tracking-widest uppercase mt-1">BY HOUSE OF CHAOS • JODHPUR</p>
           </div>
 
-          {/* Ticket Card Container */}
-          <div 
-            ref={ticketRef}
-            className={`glass-panel relative overflow-hidden rounded-3xl p-6 text-white border border-zinc-800 ${typeBorderGlow} print:border-none print:shadow-none print:bg-white print:text-black`}
+          {/* Ticket Pass Card */}
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative bg-gradient-to-b from-zinc-900/95 via-zinc-900/98 to-black border border-red-600/40 rounded-3xl p-6 shadow-2xl backdrop-blur-xl overflow-hidden"
           >
-            {/* VIP Card Accent line */}
-            {isVIP && (
-              <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${currentTheme.topGrad}`}></div>
-            )}
-            {isCouple && (
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-pink-400 via-pink-600 to-rose-700"></div>
-            )}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-600 via-amber-500 to-red-600"></div>
 
-            {/* Logo and Type */}
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4 print:border-zinc-300">
-              <div className="flex flex-col gap-1.5 items-start">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-3.5 object-contain print:hidden" />
-                <span className="text-sm font-extrabold tracking-widest text-white print:block hidden">MADSPHERE</span>
-                <span className={`text-[9px] ${currentTheme.text} font-semibold tracking-[0.25em]`}>{isTable ? 'VIP TABLE PASS' : isVIP ? 'VIP ACCESS' : 'SECURE PASS'}</span>
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-4 mb-4">
+              <div>
+                <div className="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">PASSHOLDER</div>
+                <div className="text-2xl font-black text-white capitalize mt-0.5">{ticketData?.name || recentGeneratedTicket?.guestName || 'Valued Guest'}</div>
               </div>
-              <span className={`rounded-full border px-3 py-1 text-xs font-semibold tracking-wider ${typeBadgeColor}`}>
-                {ticketData.ticketType.toUpperCase()}
-              </span>
-            </div>
-
-            {/* Event Meta */}
-            <div className="mt-5 space-y-3">
-              <h3 className="text-xl font-bold text-white print:text-black">{eventSettings.title}</h3>
-              <div className="flex items-center text-sm text-zinc-400 print:text-zinc-700">
-                <Calendar className={`mr-2 h-4 w-4 ${currentTheme.text}`} />
-                <span>{eventSettings.date}</span>
-              </div>
-              <div className="flex items-center text-sm text-zinc-400 print:text-zinc-700">
-                <Clock className={`mr-2 h-4 w-4 ${currentTheme.text}`} />
-                <span>{eventSettings.time}</span>
-              </div>
-              <div className="flex items-center text-sm text-zinc-400 print:text-zinc-700">
-                <a 
-                  href={`https://maps.google.com/?q=${encodeURIComponent(eventSettings.venue + ' ' + eventSettings.address)}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-center text-sm text-zinc-400 hover:text-white transition-all print:text-zinc-700 group cursor-pointer"
-                >
-                  <MapPin className={`mr-2 h-4 w-4 ${currentTheme.text} group-hover:scale-110 transition-transform`} />
-                  <span className="underline decoration-dashed decoration-zinc-600 hover:decoration-white">{eventSettings.venue}, {eventSettings.address}</span>
-                </a>
+              <div className="text-right">
+                <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-red-600/20 text-red-400 border border-red-600/30 uppercase">
+                  {ticketData?.validDays === 'day_1' ? 'DAY 1 PASS (18 OCT)' : ticketData?.validDays === 'day_2' ? 'DAY 2 PASS (19 OCT)' : '2-DAY SEASON PASS'}
+                </span>
               </div>
             </div>
 
-            {/* Attendee Details */}
-            <div className="mt-6 rounded-2xl bg-zinc-950/60 p-4 border border-zinc-900 print:bg-zinc-100 print:border-zinc-200">
-              <span className="text-xs tracking-wider text-zinc-500 uppercase">Guest Name</span>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-lg font-semibold text-white print:text-black">{ticketData.name}</span>
-                {isVIP && <Sparkles className="h-5 w-5 text-[#ffe082] animate-pulse" />}
-              </div>
-              
-              <div className="mt-3 flex items-center justify-between border-t border-zinc-900/60 pt-3 text-xs text-zinc-500">
+            <div className="grid grid-cols-2 gap-3 mb-5 bg-zinc-950/80 p-3.5 rounded-2xl border border-zinc-800/80">
+              <div className="flex items-start gap-2">
+                <Calendar className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
                 <div>
-                  <span className="block uppercase">Pass Code</span>
-                  <span className="font-mono text-zinc-300 font-semibold print:text-black">{ticketData.ticketId.slice(0, 8).toUpperCase()}</span>
+                  <div className="text-[9px] font-bold text-zinc-400 uppercase">DATES</div>
+                  <div className="text-xs font-black text-white">18 & 19 OCT 2026</div>
                 </div>
-                <div className="text-right">
-                  <span className="block uppercase">Status</span>
-                  <span className="flex items-center font-medium text-emerald-400">
-                    <ShieldCheck className="mr-1 h-3.5 w-3.5" /> SECURED
-                  </span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Clock className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-[9px] font-bold text-zinc-400 uppercase">TIMINGS</div>
+                  <div className="text-xs font-black text-white">7:00 PM ONWARDS</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 col-span-2 mt-1">
+                <MapPin className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-[9px] font-bold text-zinc-400 uppercase">VENUE</div>
+                  <div className="text-xs font-black text-white">Filos 24/7, Jodhpur, Rajasthan</div>
                 </div>
               </div>
             </div>
 
-            {/* QR Code Section */}
-            <div className="mt-6 flex flex-col items-center justify-center border-t border-dashed border-zinc-800 pt-6 print:border-zinc-300">
-              <div className="relative rounded-2xl bg-white p-3 shadow-xl">
-                {qrUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={qrUrl} alt="QR Code Ticket" className="h-44 w-44" />
-                ) : (
-                  <div className="flex h-44 w-44 items-center justify-center bg-zinc-100 text-black">
-                    <QrCode className="h-10 w-10 animate-pulse text-zinc-400" />
-                  </div>
-                )}
-              </div>
-              
-              <p className="mt-4 text-center text-xs tracking-wider text-zinc-500 print:text-zinc-700">
-                Present this QR code at the entrance.<br />
-                It will be scanned once to authorize admission.
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons (Hidden on Print) */}
-          <div className="mt-6 flex gap-4 print:hidden">
-            <button
-              onClick={handleCopyLink}
-              className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 border border-zinc-800 py-3.5 text-sm font-semibold tracking-wider text-white transition-all hover:bg-zinc-800 active:scale-95"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-4 w-4 text-emerald-400" />
-                  COPIED LINK
-                </>
+            {/* QR Code */}
+            <div className="bg-white p-4 rounded-2xl text-center shadow-xl border border-red-500/20 mb-4">
+              {qrUrl ? (
+                <img src={qrUrl} alt="Gate Pass QR" className="w-60 h-60 mx-auto rounded-lg" />
               ) : (
-                <>
-                  <Copy className="h-4 w-4 text-zinc-400" />
-                  COPY PASS LINK
-                </>
+                <div className="w-60 h-60 mx-auto flex items-center justify-center bg-zinc-100 rounded-lg text-zinc-500 text-xs">
+                  Generating QR Pass...
+                </div>
               )}
-            </button>
-            
+              <div className="mt-2 text-[10px] font-black tracking-widest text-zinc-800 uppercase">
+                SHOW THIS QR CODE AT ENTRANCE GATE
+              </div>
+            </div>
+
+            <div className="text-center text-[10px] text-zinc-500 font-mono tracking-widest">
+              PASS CATEGORY: {ticketData?.ticketType || recentGeneratedTicket?.ticketType || 'Rangilo Raas Pass'}
+            </div>
+          </motion.div>
+
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-3 mt-5">
             <button
-              onClick={handleDownload}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-2xl ${currentTheme.bg} ${currentTheme.hoverBg} py-3.5 text-sm font-semibold tracking-wider text-zinc-950 transition-all active:scale-95 shadow-lg shadow-black/10 cursor-pointer`}
+              onClick={shareWhatsAppAgain}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg transition"
             >
-              <Download className="h-4 w-4" />
-              SHARE / SAVE
+              <Share2 className="w-4 h-4" />
+              WhatsApp Share
+            </button>
+
+            <button
+              onClick={copyLink}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs border border-zinc-700 transition"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Link Copied!' : 'Copy Pass Link'}
             </button>
           </div>
-        </motion.div>
-      </div>
-    );
-  }
 
-  // RENDER DUMMY / INVALID TOKEN ERROR
-  if (ticketToken && tokenError) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#060608] px-6 text-center text-white">
-        <div className="rounded-3xl border border-red-500/20 bg-red-950/10 p-8 max-w-md shadow-2xl backdrop-blur-xl">
-          <QrCode className="mx-auto h-16 w-16 text-red-500 animate-pulse" />
-          <h2 className="mt-6 text-xl font-bold text-white tracking-wide">Invalid or Expired Ticket Pass</h2>
-          <p className="mt-3 text-sm text-zinc-400 leading-relaxed">
-            This entry pass verification link is invalid, expired, or has been altered. All digital tickets are cryptographically secured. Please request a valid pass link from your official organizer.
-          </p>
-          <a
-            href="/"
-            className="mt-6 inline-block rounded-xl bg-zinc-900 border border-zinc-800 px-6 py-3 text-xs font-bold tracking-wider text-zinc-300 hover:text-white hover:border-zinc-700 transition-all"
-          >
-            RETURN TO PRIVATE PORTAL
-          </a>
+          <div className="text-center mt-6">
+            <button 
+              onClick={() => { setGeneratedToken(null); setRecentGeneratedTicket(null); window.history.replaceState({}, '', '/'); }}
+              className="text-xs font-bold text-red-400 hover:underline"
+            >
+              + Issue Another Pass & Share via WhatsApp
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // DEFAULT LANDING VIEW: PASS-ONLY LOCK SCREEN (Prevents public discovery of internal pricing and tables)
+  // DEFAULT MAIN PAGE: TICKET ISSUANCE & WHATSAPP DISPATCHER
   return (
-    <div className="flex min-h-screen flex-col bg-[#060608] text-white justify-between">
-      {/* Dynamic Theme Glow Effects */}
-      <div className={`absolute top-0 left-1/4 -z-10 h-96 w-96 rounded-full ${currentTheme.glow} opacity-5 blur-[120px]`}></div>
-      <div className={`absolute top-1/3 right-1/4 -z-10 h-[400px] w-[400px] rounded-full ${currentTheme.glow} opacity-5 blur-[150px]`}></div>
+    <div className="min-h-screen bg-[#090212] text-white selection:bg-red-600 selection:text-white pb-20">
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-red-600/20 blur-[160px] rounded-full"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[350px] bg-amber-600/15 blur-[140px] rounded-full"></div>
+      </div>
 
-      {/* Header bar */}
-      <header className="border-b border-white/5 bg-black/40 px-6 py-4 backdrop-blur-md">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
+      <header className="relative z-10 border-b border-zinc-800/80 backdrop-blur-xl bg-zinc-950/60 sticky top-0">
+        <div className="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/madsphere_logo.png" alt="MadSphere Logo" className="h-5 object-contain" />
-            <span className="text-[9px] tracking-[0.3em] font-semibold text-zinc-500 uppercase pt-0.5">EXCLUSIVE PORTAL</span>
+            <span className="text-[10px] tracking-[0.25em] font-semibold text-zinc-500 uppercase pt-0.5">RANGILO RAAS 2026</span>
           </div>
-          <div className="flex items-center gap-4">
-            <a 
-              href="/admin" 
-              className={`rounded-full ${currentTheme.bg} ${currentTheme.hoverBg} px-4 py-1.5 text-xs font-semibold tracking-wider text-black transition-all`}
-            >
-              STAFF LOGIN
-            </a>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full bg-red-600/20 text-red-400 border border-red-600/30 uppercase">
+              HOUSE OF CHAOS
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Main Lock Content */}
-      <main className="mx-auto max-w-lg px-6 py-16 text-center flex-1 flex flex-col items-center justify-center">
-        <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-8 sm:p-10 shadow-2xl backdrop-blur-xl relative overflow-hidden w-full">
-          <div className={`absolute -top-12 -right-12 h-36 w-36 rounded-full ${currentTheme.glow} opacity-10 blur-2xl`}></div>
-          
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6 shadow-inner">
-            <ShieldCheck className={`h-7 w-7 ${currentTheme.text}`} />
+      <main className="relative z-10 max-w-md mx-auto px-4 pt-4">
+        {/* Calligraphy Header Logo */}
+        <div className="text-center mb-5">
+          <img 
+            src="/IMG_3217.PNG" 
+            alt="रंगीलो रास Logo" 
+            className="h-28 mx-auto object-contain drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] mb-1"
+          />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest bg-red-600/20 border border-red-600/30 text-red-400 uppercase">
+            <Sparkles className="w-3 h-3 text-red-400" />
+            18 & 19 OCT 2026 • JODHPUR • HOUSE OF CHAOS
+          </span>
+        </div>
+
+        {/* Ticket Generation Form */}
+        <form onSubmit={handleGeneratePass} className="bg-zinc-900/90 border border-red-600/30 rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-4">
+          <div>
+            <label className="block text-xs font-extrabold text-zinc-300 mb-1">Guest Full Name *</label>
+            <input
+              type="text"
+              required
+              value={guestName}
+              onChange={e => setGuestName(e.target.value)}
+              placeholder="e.g. Lavleen Rajveer"
+              className="w-full px-4 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-white text-sm font-semibold focus:border-red-500 outline-none"
+            />
           </div>
 
-          <span className="text-[10px] uppercase tracking-[0.3em] font-extrabold text-zinc-400 block mb-2">PRIVATE EVENT ACCESS</span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white mb-3">
-            {eventSettings.title}
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed mb-8">
-            {eventSettings.subtitle}. Entry passes for this event are strictly private and invitation-only. Please use the unique QR link shared via WhatsApp or SMS to view your entrance ticket.
-          </p>
+          <div>
+            <label className="block text-xs font-extrabold text-zinc-300 mb-1">WhatsApp Mobile Number *</label>
+            <input
+              type="tel"
+              required
+              value={guestPhone}
+              onChange={e => setGuestPhone(e.target.value)}
+              placeholder="10 digit mobile number (e.g. 9876543210)"
+              className="w-full px-4 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-white text-sm font-semibold focus:border-red-500 outline-none"
+            />
+          </div>
 
-          <div className="rounded-2xl bg-zinc-900/60 border border-zinc-850 p-4 text-left space-y-2 mb-6">
-            <div className="flex items-center gap-2.5 text-xs font-semibold text-zinc-200">
-              <QrCode className="h-4 w-4 text-[#cca43b]" />
-              <span>Personalized QR Pass Required</span>
+          <div>
+            <label className="block text-xs font-extrabold text-zinc-300 mb-1">Select Pass & Pricing Category *</label>
+            <select
+              value={passCategory}
+              onChange={e => {
+                setPassCategory(e.target.value);
+                if (e.target.value.includes('Solo')) setGenderCategory('Male');
+                else if (e.target.value.includes('Couple')) setGenderCategory('Couple');
+                else setGenderCategory('Other');
+              }}
+              className="w-full px-4 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-white text-xs font-bold focus:border-red-500 outline-none"
+            >
+              <optgroup label="🎟️ 2-DAY PHASE 1 PASSES (18 & 19 OCT)">
+                <option value="2-Day Phase 1 Pass - Couple (₹999)">2-Day Phase 1 Pass - Couple (₹999/-)</option>
+                <option value="2-Day Phase 1 Pass - Solo (₹699)">2-Day Phase 1 Pass - Solo (₹699/-)</option>
+                <option value="2-Day Phase 1 Pass - Group of 10 (₹5999)">2-Day Phase 1 Pass - Group of 10 (₹5,999/-)</option>
+              </optgroup>
+              
+              <optgroup label="🎟️ SINGLE DAY EARLY BIRD PASSES (18 OCT / 19 OCT)">
+                <option value="Day 1 Early Bird Pass - Solo (₹599)">Day 1 Early Bird Pass - Solo (₹599/-)</option>
+                <option value="Day 1 Early Bird Pass - Couple (₹899)">Day 1 Early Bird Pass - Couple (₹899/-)</option>
+                <option value="Day 1 Early Bird Pass - Group of 10 (₹4999)">Day 1 Early Bird Pass - Group of 10 (₹4,999/-)</option>
+                <option value="Day 2 Early Bird Pass - Solo (₹599)">Day 2 Early Bird Pass - Solo (₹599/-)</option>
+                <option value="Day 2 Early Bird Pass - Couple (₹899)">Day 2 Early Bird Pass - Couple (₹899/-)</option>
+                <option value="Day 2 Early Bird Pass - Group of 10 (₹4999)">Day 2 Early Bird Pass - Group of 10 (₹4,999/-)</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className="block text-[11px] font-bold text-zinc-400 mb-1">Payment Method</label>
+              <select
+                value={paymentMethod}
+                onChange={e => setPaymentMethod(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:border-red-500 outline-none"
+              >
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI Payment</option>
+                <option value="Complimentary">Complimentary / Free</option>
+              </select>
             </div>
-            <p className="text-[11px] text-zinc-400 font-light leading-normal">
-              Each digital pass contains a cryptographic signature verified directly at the venue gate. Unauthorized link tampering or manipulation is monitored and flagged by our security system.
-            </p>
+
+            <div>
+              <label className="block text-[11px] font-bold text-zinc-400 mb-1">Organizer / Host</label>
+              <input
+                type="text"
+                value={collectedBy}
+                onChange={e => setCollectedBy(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:border-red-500 outline-none"
+              />
+            </div>
           </div>
 
-          <div className="text-[11px] text-zinc-500 font-medium">
-            Need assistance or didn&apos;t receive your pass? Contact your official host or promoter.
-          </div>
-        </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-4 rounded-2xl font-black text-sm bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl shadow-emerald-600/20 transition flex items-center justify-center gap-2.5 disabled:opacity-50"
+          >
+            <Send className="w-4 h-4" />
+            {isSubmitting ? 'Generating & Opening WhatsApp...' : 'Generate Pass & Send via WhatsApp'}
+          </button>
+        </form>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-zinc-900 bg-black/80 py-8 text-zinc-500">
-        <div className="mx-auto max-w-4xl px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/madsphere_logo.png" alt="MadSphere" className="h-6 object-contain opacity-60" />
-            <span className="text-[10px] uppercase tracking-wider text-zinc-600">© 2026 MadSphere. All rights reserved.</span>
-          </div>
-          <div className="flex gap-4 text-[11px]">
-            <a href="https://instagram.com/madsphere.co" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-300 transition-colors">Instagram</a>
-            <a href="mailto:madsphere.info@gmail.com" className="hover:text-zinc-300 transition-colors">Support</a>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

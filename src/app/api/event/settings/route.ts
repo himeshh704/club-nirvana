@@ -5,17 +5,17 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_SETTINGS = {
   id: '00000000-0000-0000-0000-000000000001',
-  title: 'MIDNIGHT MADNESS',
-  subtitle: 'BOLLY TECH // HOUSE PARTY (INVITE ONLY)',
-  date: '12 SEPT 2026',
-  time: '9:00 PM ONWARDS',
-  venue: 'THE HOUSE',
-  address: 'Invite Only / Shared Upon Confirmation',
+  title: 'RANGILO RAAS 2026',
+  subtitle: 'THE BIGGEST GARBA FESTIVAL OF JODHPUR • HOUSE OF CHAOS',
+  date: '18 & 19 OCT 2026',
+  time: '7:00 PM ONWARDS',
+  venue: 'FILOS 24/7',
+  address: 'Filos 24/7, Jodhpur, Rajasthan',
   accent_color: 'pink',
-  lineup_artist: 'MIDNIGHT MADNESS',
-  lineup_genre: 'NONSTOP MUSIC. ZERO REGRETS.',
-  support_artist: 'BOLLY TECH',
-  support_genre: 'Early Bird Pass ₹1000 (First 3 Girls FREE)'
+  lineup_artist: 'RANGILO RAAS 2026',
+  lineup_genre: '2 DAYS OF NON-STOP GARBA & DANDIYA',
+  support_artist: 'HOUSE OF CHAOS',
+  support_genre: '2-Day Season Pass & Single Day Early Bird Passes'
 };
 
 export async function GET() {

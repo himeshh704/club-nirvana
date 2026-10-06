@@ -1,0 +1,191 @@
+# 💃 RANGILO RAAS 2026 — COMPLETE 2-DAY QR TICKET SCANNING & SYSTEM BLUEPRINT
+> **Official Operational, Technical & Security Specification**  
+> **Event Name**: Rangilo Raas 2026 (The Biggest Garba Festival of Jodhpur)  
+> **Event Dates**: 18th & 19th October 2026  
+> **Venue**: Jodhpur Garba Grounds, Jodhpur, Rajasthan  
+> **Prepared For**: Rangilo Raas Organizing Committee & Management Team  
+> **System Stack**: Next.js 16, Supabase, Cryptographic Offline PWA Scanner Engine  
+
+================================================================================
+1. EXECUTIVE SUMMARY & SYSTEM OVERVIEW
+================================================================================
+
+Rangilo Raas is a premier 2-day Garba festival expecting high crowd density, fast-moving entry queues, and potential cellular network congestion at the event grounds in Jodhpur.
+
+Our Smart 2-Day QR Ticket Scanning Platform delivers:
+- Comprehensive Pass Options: Supports both Single-Day Passes (Day 1 - 18 Oct / Day 2 - 19 Oct) and 2-Day Season Combo Passes for Female, Male, Couple, and VIP categories.
+- Online Guest Portal with Instant UPI Payment: Guests book online, pay via UPI QR code, and receive their cryptographically signed ticket pass instantly on screen.
+- Automatic Date-Aware Gate Security: Scanner devices automatically enforce pass validity rules (Day 1 passes work only on Oct 18, Day 2 passes work only on Oct 19, and 2-Day Season passes allow 1 entry per night).
+- 100% Offline-First Engine: Scanning takes < 50 milliseconds per ticket with zero internet connection, guaranteeing zero queue delays.
+- Real-Time Pass-Back & Screenshot Defense: Flags duplicate entry attempts instantly across all gate scanners with exact gate timestamps.
+- Live Organizer Command Dashboard: Real-time crowd count, VIP venue statistics, gate throughput rates, and 1-click WhatsApp pass delivery.
+
+================================================================================
+2. TICKET PASS CATEGORIES & PRICING STRUCTURE
+================================================================================
+
+Pass Category        | Valid Dates              | Category   | Price   | Gate Scan Rule
+-------------------- | ------------------------ | ---------- | ------- | ---------------------------------------------------
+Day 1 Female Pass    | 18 Oct Only (Night 1)    | Female     | ₹299    | Valid Oct 18 Only. Rejected on Oct 19.
+Day 1 Male Pass      | 18 Oct Only (Night 1)    | Male       | ₹499    | Valid Oct 18 Only. Rejected on Oct 19.
+Day 1 Couple Pass    | 18 Oct Only (Night 1)    | Couple     | ₹699    | Valid Oct 18 Only (Covers 1 Couple).
+Day 2 Female Pass    | 19 Oct Only (Night 2)    | Female     | ₹399    | Valid Oct 19 Only. Rejected on Oct 18.
+Day 2 Male Pass      | 19 Oct Only (Night 2)    | Male       | ₹599    | Valid Oct 19 Only. Rejected on Oct 18.
+Day 2 Couple Pass    | 19 Oct Only (Night 2)    | Couple     | ₹899    | Valid Oct 19 Only (Covers 1 Couple).
+Female Season Pass   | 18 & 19 Oct (Both Days)  | Female     | ₹599    | 1 Entry on Oct 18 + 1 Entry on Oct 19.
+Male Season Pass     | 18 & 19 Oct (Both Days)  | Male       | ₹899    | 1 Entry on Oct 18 + 1 Entry on Oct 19.
+Couple Season Pass   | 18 & 19 Oct (Both Days)  | Couple     | ₹1,299  | 1 Entry on Oct 18 + 1 Entry on Oct 19.
+VIP Lounge Pass      | 18 & 19 Oct (Both Days)  | VIP Lounge | ₹1,999  | 2-Day Priority VIP Entry + Lounge Access.
+
+================================================================================
+3. GATE SCAN RESOLUTION DECISION MATRIX
+================================================================================
+
+When a ticket QR code is presented at the gate, the scanner app executes the following decision flow:
+
+Pass Type    | Active Scan Date | Day 1 Scan State | Day 2 Scan State | Scanner Result  | Guard UI Screen Alert & Audio Chime
+------------ | ---------------- | ---------------- | ---------------- | --------------- | -----------------------------------
+2-Day Season | Oct 18 (Day 1)   | Not Used         | Not Used         | GRANT ENTRY     | GREEN: Welcome [Guest Name] (Day 1 of 2)
+2-Day Season | Oct 18 (Day 1)   | Already Used     | Not Used         | DUPLICATE ENTRY | RED: Scanned Today at 8:14 PM (Gate A)
+2-Day Season | Oct 19 (Day 2)   | Used (Oct 18)    | Not Used         | GRANT ENTRY     | GREEN: Welcome [Guest Name] (Day 2 of 2)
+2-Day Season | Oct 19 (Day 2)   | Used (Oct 18)    | Already Used     | DUPLICATE ENTRY | RED: Scanned Today at 7:50 PM (VIP Gate)
+Day 1 Pass   | Oct 18 (Day 1)   | Not Used         | N/A              | GRANT ENTRY     | GREEN: Welcome [Guest Name] (Day 1 Pass)
+Day 1 Pass   | Oct 19 (Day 2)   | N/A              | N/A              | WRONG DATE      | YELLOW: Ticket Valid for Day 1 (Oct 18) Only
+Day 2 Pass   | Oct 18 (Day 1)   | N/A              | N/A              | WRONG DATE      | YELLOW: Ticket Valid for Day 2 (Oct 19) Only
+Day 2 Pass   | Oct 19 (Day 2)   | N/A              | Not Used         | GRANT ENTRY     | GREEN: Welcome [Guest Name] (Day 2 Pass)
+Any Ticket   | Any Date         | Banned           | Banned           | BLACK-LISTED    | DARK RED: Guest Blacklisted - Alert Security
+
+================================================================================
+4. GATE SECURITY APP & SCANNER UX
+================================================================================
+
+The mobile scanner app runs directly on security staff smartphones/tablets (iOS & Android) via web browser or PWA mode with zero app store download required.
+
+Workflow:
+📷 Scan Attendee QR Code
+       │
+       ▼
+Cryptographic HMAC Verification
+       │
+       ├── Invalid Signature ──────────────► FAKE TICKET (Cryptographic Mismatch)
+       │
+       ▼
+Check Event Date & Ticket Valid Days
+       │
+       ├── Pass Date != Today ─────────────► WRONG DATE PASS (Day 1/2 Notice)
+       │
+       ▼
+Check Today's Scan Status
+       │
+       ├── Already Scanned Today ──────────► DUPLICATE SCAN (Scanned at Gate X at HH:MM)
+       │
+       ▼
+Check Blacklist Status
+       │
+       ├── Blacklisted == True ────────────► BLACKLISTED GUEST (Alert Security)
+       │
+       └── Blacklisted == False ───────────► ACCESS GRANTED (Mark Day Scanned + Sound Chime)
+
+Key UI Features for Security Guards:
+- Full-Screen Color Feedback: High-contrast flash (Green = Go, Red = Stop, Yellow = Wrong Date) designed specifically for low-light Garba venue conditions.
+- Audio Feedback: High-pitch double beep for entry success, low-pitch buzzer for duplicate/invalid.
+- Guest Verification Card: Displays Guest Name, Pass Category (Female / Male / Couple / VIP), and Ticket ID for fast visual spot-checks.
+
+================================================================================
+5. JODHPUR GROUND NETWORK & OFFLINE TECHNOLOGY
+================================================================================
+
+During peak Garba hours (8:00 PM – 10:30 PM), local mobile networks (Jio / Airtel / Vi) at event grounds in Jodhpur face severe congestion. Our offline engine insulates gate operations completely:
+
+1. Pre-Fetch Manifest: Security devices tap "Download Manifest" prior to opening gates. All valid ticket tokens are pre-stored locally in IndexedDB browser memory.
+2. Sub-50ms Offline Verification: Scanners validate HMAC-SHA256 digital signatures locally without needing external API calls.
+3. Automatic Background Sync: Scanners queue check-in timestamps locally. Whenever internet pulses back up or devices connect to a local Wi-Fi router, logs sync automatically with the central database.
+
+================================================================================
+6. ANTI-FRAUD & SECURITY DEFENSES
+================================================================================
+
+Threat Model                      | Countermeasure / System Defense
+--------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Screenshot Sharing                | Once scanned at Gate A, ticket status updates globally across all scanners within seconds. A secondary attempt with a screenshot triggers an instant DUPLICATE SCAN ALERT.
+Pass-Back (Handing ticket back)   | Instant timestamp registration. Re-scanning within 5 minutes or at another gate triggers an immediate alarm.
+Fake Generated QR Codes           | All QR payloads use HMAC-SHA256 Cryptographic Signatures. Counterfeit generated QR codes fail decryption and show FAKE TICKET.
+
+================================================================================
+7. REAL-TIME ORGANIZER DASHBOARD & WHATSAPP INTEGRATION
+================================================================================
+
+Event organizers maintain complete control from any smartphone or laptop:
+1. Live Occupancy Ticker: Real-time headcount of attendees inside venue.
+2. Revenue Summary: Breakdowns for Cash vs UPI vs Online ticket sales.
+3. Gate Traffic Heatmap: Monitor scans/minute per gate to balance security queues.
+4. 1-Click WhatsApp Ticket Sharing: Organizers can generate passes for offline/VIP guests and send the ticket link directly to their WhatsApp number (https://wa.me/...).
+
+================================================================================
+8. DATABASE SCHEMA BLUEPRINT (schema.sql)
+================================================================================
+
+-- Database Schema for Rangilo Raas 2026 Ticketing System
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. USERS TABLE
+CREATE TABLE IF NOT EXISTS public.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    email TEXT,
+    age INTEGER,
+    gender TEXT CHECK (gender IN ('Male', 'Female', 'Couple', 'Other')),
+    instagram TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. TICKETS TABLE
+CREATE TABLE IF NOT EXISTS public.tickets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    ticket_type TEXT NOT NULL,
+    valid_days TEXT NOT NULL DEFAULT 'both' CHECK (valid_days IN ('day_1', 'day_2', 'both')),
+    qr_token TEXT NOT NULL UNIQUE,
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+    used_at TIMESTAMPTZ,
+    day_1_scanned BOOLEAN NOT NULL DEFAULT FALSE,
+    day_1_scanned_at TIMESTAMPTZ,
+    day_2_scanned BOOLEAN NOT NULL DEFAULT FALSE,
+    day_2_scanned_at TIMESTAMPTZ,
+    is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+    collected_by TEXT DEFAULT 'Online Guest Portal',
+    payment_method TEXT DEFAULT 'Online UPI',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3. CHECKINS TABLE
+CREATE TABLE IF NOT EXISTS public.checkins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id UUID NOT NULL REFERENCES public.tickets(id) ON DELETE CASCADE,
+    scan_date TEXT NOT NULL DEFAULT 'Oct 18',
+    scanner_device TEXT NOT NULL,
+    gate TEXT NOT NULL,
+    online_or_offline TEXT NOT NULL CHECK (online_or_offline IN ('online', 'offline')),
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+================================================================================
+9. EVENT-DAY EXECUTION TIMELINE
+================================================================================
+
+OCTOBER 17 (Day -1): SYSTEM SETUP & DRILL
+├── 04:00 PM: Configure Event Metadata (Title: Rangilo Raas 2026, Dates: Oct 18-19)
+├── 06:00 PM: Issue Gate Staff Access PINs (Gate 1: 1010, Gate 2: 2020, VIP: 8888)
+└── 08:00 PM: Perform mock offline scan drill across 4 security devices
+
+OCTOBER 18 (DAY 1 - GARBA NIGHT 1):
+├── 05:30 PM: Security staff sync offline ticket database manifest
+├── 06:30 PM: Gates open - System set to Day 1 Scanning Mode (Oct 18)
+└── 11:30 PM: Gates close - Day 1 reconciliation sync & statistics export
+
+OCTOBER 19 (DAY 2 - GRAND FINALE):
+├── 05:30 PM: Security staff update scanner to Day 2 Scanning Mode (Oct 19)
+├── 06:30 PM: Gates open - System set to Day 2 Scanning Mode
+└── 11:30 PM: Event conclusion - Final 2-day festival attendance report export
