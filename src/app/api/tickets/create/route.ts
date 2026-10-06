@@ -16,13 +16,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Determine valid_days from ticket_type string
-    let valid_days: 'day_1' | 'day_2' | 'both' = 'both';
-    const lowerType = ticket_type.toLowerCase();
-    if (lowerType.includes('day 1') && !lowerType.includes('2-day')) {
-      valid_days = 'day_1';
-    } else if (lowerType.includes('day 2') && !lowerType.includes('2-day')) {
-      valid_days = 'day_2';
+    // Determine valid_days from explicit parameter or ticket_type string
+    let valid_days: 'day_1' | 'day_2' | 'both' = body.valid_days || 'both';
+    if (!body.valid_days) {
+      const lowerType = ticket_type.toLowerCase();
+      if (lowerType.includes('day 1') && !lowerType.includes('2-day')) {
+        valid_days = 'day_1';
+      } else if (lowerType.includes('day 2') && !lowerType.includes('2-day')) {
+        valid_days = 'day_2';
+      }
     }
 
     const ticketId = randomUUID();

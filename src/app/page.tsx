@@ -308,107 +308,89 @@ function GuestPageContent() {
 
       <main className="relative z-10 max-w-md mx-auto px-4 pt-4">
         {/* Calligraphy Header Logo */}
-        <div className="text-center mb-5">
+        <div className="text-center mb-6">
           <img 
             src="/IMG_3217.PNG" 
             alt="रंगीलो रास Logo" 
-            className="h-28 mx-auto object-contain drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] mb-1"
+            className="h-32 mx-auto object-contain drop-shadow-[0_0_25px_rgba(220,38,38,0.5)] mb-2"
           />
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest bg-red-600/20 border border-red-600/30 text-red-400 uppercase">
-            <Sparkles className="w-3 h-3 text-red-400" />
-            18 & 19 OCT 2026 • JODHPUR • HOUSE OF CHAOS
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-black tracking-widest bg-red-600/20 border border-red-600/30 text-red-400 uppercase">
+            <Sparkles className="w-3.5 h-3.5 text-red-400" />
+            18 & 19 OCT 2026 • FILOS 24/7, JODHPUR
           </span>
         </div>
 
-        {/* Ticket Generation Form */}
-        <form onSubmit={handleGeneratePass} className="bg-zinc-900/90 border border-red-600/30 rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-4">
-          <div>
-            <label className="block text-xs font-extrabold text-zinc-300 mb-1">Guest Full Name *</label>
-            <input
-              type="text"
-              required
-              value={guestName}
-              onChange={e => setGuestName(e.target.value)}
-              placeholder="e.g. Lavleen Rajveer"
-              className="w-full px-4 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-white text-sm font-semibold focus:border-red-500 outline-none"
-            />
+        {/* Event Info & Official Pricing Reference Card */}
+        <div className="bg-zinc-900/90 border border-red-600/30 rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-5">
+          <div className="text-center border-b border-zinc-800 pb-4">
+            <h2 className="text-xl font-black tracking-wide text-white">RANGILO RAAS 2026</h2>
+            <p className="text-xs text-amber-400 font-bold mt-1">THE BIGGEST GARBA FESTIVAL OF JODHPUR</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">Organized by House of Chaos</p>
           </div>
 
-          <div>
-            <label className="block text-xs font-extrabold text-zinc-300 mb-1">WhatsApp Mobile Number *</label>
-            <input
-              type="tel"
-              required
-              value={guestPhone}
-              onChange={e => setGuestPhone(e.target.value)}
-              placeholder="10 digit mobile number (e.g. 9876543210)"
-              className="w-full px-4 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-white text-sm font-semibold focus:border-red-500 outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-extrabold text-zinc-300 mb-1">Select Pass & Pricing Category *</label>
-            <select
-              value={passCategory}
-              onChange={e => {
-                setPassCategory(e.target.value);
-                if (e.target.value.includes('Solo')) setGenderCategory('Male');
-                else if (e.target.value.includes('Couple')) setGenderCategory('Couple');
-                else setGenderCategory('Other');
-              }}
-              className="w-full px-4 py-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-white text-xs font-bold focus:border-red-500 outline-none"
-            >
-              <optgroup label="🎟️ 2-DAY PHASE 1 PASSES (18 & 19 OCT)">
-                <option value="2-Day Phase 1 Pass - Couple (₹999)">2-Day Phase 1 Pass - Couple (₹999/-)</option>
-                <option value="2-Day Phase 1 Pass - Solo (₹699)">2-Day Phase 1 Pass - Solo (₹699/-)</option>
-                <option value="2-Day Phase 1 Pass - Group of 10 (₹5999)">2-Day Phase 1 Pass - Group of 10 (₹5,999/-)</option>
-              </optgroup>
-              
-              <optgroup label="🎟️ SINGLE DAY EARLY BIRD PASSES (18 OCT / 19 OCT)">
-                <option value="Day 1 Early Bird Pass - Solo (₹599)">Day 1 Early Bird Pass - Solo (₹599/-)</option>
-                <option value="Day 1 Early Bird Pass - Couple (₹899)">Day 1 Early Bird Pass - Couple (₹899/-)</option>
-                <option value="Day 1 Early Bird Pass - Group of 10 (₹4999)">Day 1 Early Bird Pass - Group of 10 (₹4,999/-)</option>
-                <option value="Day 2 Early Bird Pass - Solo (₹599)">Day 2 Early Bird Pass - Solo (₹599/-)</option>
-                <option value="Day 2 Early Bird Pass - Couple (₹899)">Day 2 Early Bird Pass - Couple (₹899/-)</option>
-                <option value="Day 2 Early Bird Pass - Group of 10 (₹4999)">Day 2 Early Bird Pass - Group of 10 (₹4,999/-)</option>
-              </optgroup>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 mb-1">Payment Method</label>
-              <select
-                value={paymentMethod}
-                onChange={e => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:border-red-500 outline-none"
-              >
-                <option value="Cash">Cash</option>
-                <option value="UPI">UPI Payment</option>
-                <option value="Complimentary">Complimentary / Free</option>
-              </select>
+          {/* Pricing Tiers Box */}
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 space-y-2">
+              <div className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Ticket className="w-4 h-4 text-amber-400" />
+                2-DAY PHASE 1 PASSES (18 & 19 OCT)
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                <div className="bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase">SOLO</div>
+                  <div className="text-sm font-black text-white mt-0.5">₹699/-</div>
+                </div>
+                <div className="bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase">COUPLE</div>
+                  <div className="text-sm font-black text-white mt-0.5">₹999/-</div>
+                </div>
+                <div className="bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase">GROUP OF 10</div>
+                  <div className="text-xs font-black text-amber-400 mt-1">₹5,999/-</div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 mb-1">Organizer / Host</label>
-              <input
-                type="text"
-                value={collectedBy}
-                onChange={e => setCollectedBy(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-semibold focus:border-red-500 outline-none"
-              />
+            <div className="rounded-2xl bg-zinc-950 p-4 border border-zinc-800 space-y-2">
+              <div className="text-xs font-black text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-red-400" />
+                SINGLE DAY EARLY BIRD PASSES (DAY 1 / DAY 2)
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                <div className="bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase">SOLO</div>
+                  <div className="text-sm font-black text-white mt-0.5">₹599/-</div>
+                </div>
+                <div className="bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase">COUPLE</div>
+                  <div className="text-sm font-black text-white mt-0.5">₹899/-</div>
+                </div>
+                <div className="bg-zinc-900/80 p-2 rounded-xl border border-zinc-800">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase">GROUP OF 10</div>
+                  <div className="text-xs font-black text-red-400 mt-1">₹4,999/-</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-4 rounded-2xl font-black text-sm bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl shadow-emerald-600/20 transition flex items-center justify-center gap-2.5 disabled:opacity-50"
+          {/* Secure Access Notice */}
+          <div className="rounded-2xl bg-red-950/20 border border-red-500/20 p-4 text-center space-y-1.5">
+            <ShieldCheck className="w-5 h-5 text-red-400 mx-auto" />
+            <div className="text-xs font-black text-white uppercase tracking-wider">OFFICIAL ORGANIZER PASS ISSUANCE</div>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Passes are created and issued directly by official House of Chaos organizers via WhatsApp. If you already received your pass link on WhatsApp, click the link to view your QR code.
+            </p>
+          </div>
+
+          {/* Staff & Admin Login Button */}
+          <a
+            href="/staff/login"
+            className="w-full py-3.5 rounded-2xl font-black text-xs bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 transition flex items-center justify-center gap-2"
           >
-            <Send className="w-4 h-4" />
-            {isSubmitting ? 'Generating & Opening WhatsApp...' : 'Generate Pass & Send via WhatsApp'}
-          </button>
-        </form>
+            <User className="w-4 h-4 text-amber-400" />
+            ORGANIZER & STAFF LOGIN PORTAL →
+          </a>
+        </div>
       </main>
     </div>
   );

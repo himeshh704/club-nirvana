@@ -98,6 +98,7 @@ export default function AdminPage() {
   const [gender, setGender] = useState('Male');
   const [instagram, setInstagram] = useState('');
   const [ticketType, setTicketType] = useState('Regular');
+  const [validDays, setValidDays] = useState<'both' | 'day_1' | 'day_2'>('both');
   const [paymentStatus, setPaymentStatus] = useState('Complimentary');
   const [collectedBy, setCollectedBy] = useState('Super Admin');
   
@@ -572,6 +573,7 @@ export default function AdminPage() {
           gender,
           instagram: '',
           ticket_type: ticketType,
+          valid_days: validDays,
           payment_method: paymentStatus,
           collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
         })
@@ -1526,17 +1528,38 @@ export default function AdminPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs text-zinc-500 uppercase tracking-wider block">Ticket Type / Tier</label>
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider block font-semibold">Ticket Type / Category</label>
                     <select
                       value={ticketType}
-                      onChange={(e) => setTicketType(e.target.value)}
-                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTicketType(val);
+                        if (val.includes('Day 1')) setValidDays('day_1');
+                        else if (val.includes('Day 2')) setValidDays('day_2');
+                        else setValidDays('both');
+                      }}
+                      className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow text-white font-bold"
                     >
-                      <option value="Regular">Regular</option>
-                      <option value="Couple">Couple</option>
-                      <option value="VIP Table">VIP Table</option>
-                      <option value="Staff">Staff</option>
-                      <option value="Guest">Guest</option>
+                      <optgroup label="🎟️ 2-DAY PHASE 1 PASSES (18 & 19 OCT)">
+                        <option value="2-Day Phase 1 - Solo (₹699)">2-Day Phase 1 - Solo (₹699/-)</option>
+                        <option value="2-Day Phase 1 - Couple (₹999)">2-Day Phase 1 - Couple (₹999/-)</option>
+                        <option value="2-Day Phase 1 - Group of 10 (₹5,999)">2-Day Phase 1 - Group of 10 (₹5,999/-)</option>
+                      </optgroup>
+                      
+                      <optgroup label="🎟️ SINGLE DAY EARLY BIRD PASSES">
+                        <option value="Day 1 Early Bird - Solo (₹599)">Day 1 Early Bird - Solo (₹599/-)</option>
+                        <option value="Day 1 Early Bird - Couple (₹899)">Day 1 Early Bird - Couple (₹899/-)</option>
+                        <option value="Day 1 Early Bird - Group of 10 (₹4,999)">Day 1 Early Bird - Group of 10 (₹4,999/-)</option>
+                        <option value="Day 2 Early Bird - Solo (₹599)">Day 2 Early Bird - Solo (₹599/-)</option>
+                        <option value="Day 2 Early Bird - Couple (₹899)">Day 2 Early Bird - Couple (₹899/-)</option>
+                        <option value="Day 2 Early Bird - Group of 10 (₹4,999)">Day 2 Early Bird - Group of 10 (₹4,999/-)</option>
+                      </optgroup>
+
+                      <optgroup label="👑 VIP & SPECIAL PASSES">
+                        <option value="VIP Table Pass">VIP Table Pass</option>
+                        <option value="Complimentary Pass">Complimentary Pass</option>
+                        <option value="Staff Pass">Staff Pass</option>
+                      </optgroup>
                     </select>
                   </div>
 
