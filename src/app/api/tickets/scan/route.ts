@@ -17,34 +17,62 @@ export async function POST(request: Request) {
     // Default scan date (Oct 18 = Day 1, Oct 19 = Day 2)
     const activeScanDate = scanDate || 'Oct 18';
 
-    // 1. Cryptographically verify QR token signature
-    let payload;
-    try {
-      payload = verifyQRToken(qrToken);
-    } catch (err) {
-      console.warn('QR verification signature mismatch:', err);
-      return NextResponse.json({ status: 'invalid', message: 'Cryptographic signature mismatch. Counterfeit or fake ticket.' });
+    // 0. Clean input token if scanner captured full URL
+    let rawToken = String(qrToken).trim();
+    if (rawToken.includes('ticket=')) {
+      const match = rawToken.match(/ticket=([^&]+)/);
+      if (match && match[1]) {
+        rawToken = decodeURIComponent(match[1]);
+      }
     }
 
-    const { i: ticketId, n: payloadName, t: payloadTicketType } = payload;
+    // 1. Cryptographically verify QR token signature
+    let payload: any = null;
+    let ticketId: string | null = null;
+    let payloadName: string | null = null;
+    let payloadTicketType: string | null = null;
+
+    try {
+      payload = verifyQRToken(rawToken);
+      ticketId = payload.i;
+      payloadName = payload.n;
+      payloadTicketType = payload.t;
+    } catch (err) {
+      console.warn('QR verification signature mismatch, checking DB fallback:', err);
+    }
 
     // 2. Fetch live ticket state from database
-    let ticket = null;
-    let ticketError = null;
+    let ticket: any = null;
     try {
-      const res = await supabaseAdmin
-        .from('tickets')
-        .select('id, ticket_type, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
-        .eq('id', ticketId)
-        .maybeSingle();
-      ticket = res.data;
-      ticketError = res.error;
+      if (ticketId) {
+        const res = await supabaseAdmin
+          .from('tickets')
+          .select('id, ticket_type, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
+          .eq('id', ticketId)
+          .maybeSingle();
+        ticket = res.data;
+      } else {
+        const res = await supabaseAdmin
+          .from('tickets')
+          .select('id, ticket_type, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
+          .or(`id.eq.${rawToken},qr_token.eq.${rawToken}`)
+          .maybeSingle();
+        ticket = res.data;
+        if (ticket) ticketId = ticket.id;
+      }
     } catch (dbEx) {
       console.warn('DB query exception during scan check:', dbEx);
     }
 
+    if (!payload && !ticket) {
+      return NextResponse.json({ 
+        status: 'invalid', 
+        message: 'Invalid Pass! Cryptographic signature mismatch. Counterfeit or fake ticket.' 
+      });
+    }
+
     const name = (ticket as any)?.users?.name || payloadName || 'Guest';
-    const ticketType = ticket?.ticket_type || payloadTicketType || '2-Day Season Pass';
+    const ticketType = ticket?.ticket_type || payloadTicketType || 'Rangilo Raas Pass';
     const validDays = ticket?.valid_days || (payloadTicketType?.toLowerCase().includes('day 1') ? 'day_1' : payloadTicketType?.toLowerCase().includes('day 2') ? 'day_2' : 'both');
 
     // 3. Blacklist check
