@@ -595,8 +595,8 @@ export default function AdminPage() {
       const data = await response.json();
       
       if (data.success) {
-        // Construct guest link
-        const passLink = `${window.location.origin}/?ticket=${data.qrToken}`;
+        // Construct guest link to isolated pass route
+        const passLink = `${window.location.origin}/pass/${data.qrToken}`;
         
         // Generate client QR code display (Level L error correction minimizes density/dot count for instant scanning)
         const qrUrl = await QRCode.toDataURL(data.qrToken, { margin: 2, errorCorrectionLevel: 'L' });
@@ -868,7 +868,7 @@ export default function AdminPage() {
   const handleResendWhatsApp = (ticket: any) => {
     let cleanNumber = (ticket.phone || '').replace(/\D/g, '');
     if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
-    const passLink = `${window.location.origin}/?ticket=${ticket.qr_token}`;
+    const passLink = `${window.location.origin}/pass/${ticket.qr_token}`;
     const message = `Hey *${ticket.name}*! 💃🕺\n\nHere is your official entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${ticket.ticket_type}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
     window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -1344,7 +1344,7 @@ export default function AdminPage() {
                             </button>
                             <button
                               onClick={() => {
-                                const passLink = `${window.location.origin}/?ticket=${t.qr_token}`;
+                                const passLink = `${window.location.origin}/pass/${t.qr_token}`;
                                 navigator.clipboard.writeText(passLink);
                                 alert('Pass link copied to clipboard!');
                               }}
