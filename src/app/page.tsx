@@ -382,14 +382,6 @@ function GuestPageContent() {
             </p>
           </div>
 
-          {/* Staff & Admin Login Button */}
-          <a
-            href="/staff/login"
-            className="w-full py-3.5 rounded-2xl font-black text-xs bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 transition flex items-center justify-center gap-2"
-          >
-            <User className="w-4 h-4 text-amber-400" />
-            ORGANIZER & STAFF LOGIN PORTAL →
-          </a>
         </div>
       </main>
     </div>
