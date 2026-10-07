@@ -181,23 +181,30 @@ def build_pdf(filename):
         [
             Paragraph("<b>Super Admin</b><br/>(Organizers)", table_cell_style),
             Paragraph("<code>admin</code><br/><i>(or superadmin)</i>", table_cell_style),
-            Paragraph("<b><code>admin8824</code></b><br/><i>(or admin098 / admin123)</i>", table_cell_style),
+            Paragraph("<b><code>adminsanyam123</code></b><br/><i>(or admin8824 / admin098)</i>", table_cell_style),
             Paragraph("<code>https://rangilo-raas1.vercel.app/staff/login</code><br/><i>(or /admin)</i>", table_cell_style),
-            Paragraph("Full control over Pass Creation, Attendee Directory, Financial & Gate Reports, VIP Tables, Blacklist, Delete Pass, & Branding Settings.", table_cell_style)
+            Paragraph("Full control over Pass Creation, Attendee Directory, Financial & Gate Reports, VIP Tables, Blacklist, Delete Pass, & Branding Settings. <b>Only Admin can issue Complimentary (Free) passes.</b>", table_cell_style)
+        ],
+        [
+            Paragraph("<b>Manager</b><br/>(Shailesh)", table_cell_style),
+            Paragraph("<code>shailesh</code>", table_cell_style),
+            Paragraph("<b><code>shailesh123</code></b>", table_cell_style),
+            Paragraph("<code>https://rangilo-raas1.vercel.app/staff/login</code>", table_cell_style),
+            Paragraph("Issue passes locked under Shailesh's collection logs (Cash/UPI only), 1-click WhatsApp pass dispatch, live gate feed. <i>No Complimentary passes allowed.</i>", table_cell_style)
         ],
         [
             Paragraph("<b>Manager</b><br/>(Ankur Bishnoi)", table_cell_style),
             Paragraph("<code>ankur</code><br/><i>(or ankur bishnoi)</i>", table_cell_style),
             Paragraph("<b><code>ankur1234</code></b>", table_cell_style),
             Paragraph("<code>https://rangilo-raas1.vercel.app/staff/login</code>", table_cell_style),
-            Paragraph("Issue passes locked under Ankur's collection logs, 1-click WhatsApp pass dispatch, live gate feed.", table_cell_style)
+            Paragraph("Issue passes locked under Ankur's collection logs (Cash/UPI only), 1-click WhatsApp pass dispatch, live gate feed. <i>No Complimentary passes allowed.</i>", table_cell_style)
         ],
         [
             Paragraph("<b>Manager</b><br/>(Angad Bishnoi)", table_cell_style),
             Paragraph("<code>angad</code><br/><i>(or angad bishnoi)</i>", table_cell_style),
             Paragraph("<b><code>angad1234</code></b>", table_cell_style),
             Paragraph("<code>https://rangilo-raas1.vercel.app/staff/login</code>", table_cell_style),
-            Paragraph("Issue passes locked under Angad's collection logs, 1-click WhatsApp pass dispatch, live gate feed.", table_cell_style)
+            Paragraph("Issue passes locked under Angad's collection logs (Cash/UPI only), 1-click WhatsApp pass dispatch, live gate feed. <i>No Complimentary passes allowed.</i>", table_cell_style)
         ],
         [
             Paragraph("<b>Gate Security</b><br/>(Gate Staff)", table_cell_style),

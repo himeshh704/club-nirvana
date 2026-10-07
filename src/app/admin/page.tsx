@@ -522,7 +522,10 @@ export default function AdminPage() {
     setAuthorized(true);
     setUserRole(role);
     setLoggedUser(user);
-    if (user === 'Ankur Bishnoi' || user === 'Angad Bishnoi') {
+    if (role === 'Manager') {
+      setCollectedBy(user);
+      setPaymentStatus('Cash');
+    } else if (user === 'Ankur Bishnoi' || user === 'Angad Bishnoi' || user === 'Shailesh') {
       setCollectedBy(user);
     }
 
@@ -551,6 +554,11 @@ export default function AdminPage() {
       return;
     }
 
+    if (userRole === 'Manager' && paymentStatus === 'Complimentary') {
+      alert('Permission Denied: Managers cannot issue Complimentary passes. Only Super Admin can issue free passes.');
+      return;
+    }
+
     const parsedAge = parseInt(String(age), 10);
     if (isNaN(parsedAge) || parsedAge < 21) {
       alert('Age Limit Restriction: All guests must be 21 years of age or older.');
@@ -575,7 +583,7 @@ export default function AdminPage() {
           ticket_type: ticketType,
           valid_days: validDays,
           payment_method: paymentStatus,
-          collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
+          collected_by: userRole === 'Manager' ? loggedUser : collectedBy
         })
       });
 
@@ -1598,7 +1606,9 @@ export default function AdminPage() {
                         onChange={(e) => setPaymentStatus(e.target.value)}
                         className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm text-white font-medium focus:border-amber-400"
                       >
-                        <option value="Complimentary">Complimentary / Free Pass</option>
+                        {userRole === 'Admin' && (
+                          <option value="Complimentary">Complimentary / Free Pass (Admin Only)</option>
+                        )}
                         <option value="Cash">Paid — Cash Collected</option>
                         <option value="UPI">Paid — UPI / Online</option>
                       </select>
@@ -1606,7 +1616,7 @@ export default function AdminPage() {
 
                     <div className="space-y-1.5">
                       <label className="text-xs text-amber-400 uppercase tracking-wider block font-semibold">Collected By *</label>
-                      {loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi' ? (
+                      {userRole === 'Manager' ? (
                         <select
                           value={loggedUser}
                           disabled
@@ -1623,6 +1633,7 @@ export default function AdminPage() {
                           <option value="Super Admin">Super Admin</option>
                           <option value="Ankur Bishnoi">Ankur Bishnoi</option>
                           <option value="Angad Bishnoi">Angad Bishnoi</option>
+                          <option value="Shailesh">Shailesh</option>
                           <option value="Promoter / Other">Promoter / Coordinator</option>
                         </select>
                       )}
