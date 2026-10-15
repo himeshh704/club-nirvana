@@ -28,6 +28,7 @@ import {
   getUnsyncedCheckins
 } from '@/lib/indexedDb';
 import { syncOfflineScans } from '@/lib/syncEngine';
+import { cleanPassCategory } from '@/lib/formatters';
 
 type ScanResultState = 'idle' | 'valid' | 'already_used' | 'invalid' | 'banned' | 'invalid_date';
 
@@ -292,7 +293,7 @@ export default function StaffDashboard() {
         setResultState('valid');
         setResultDetails({
           name: ticket.name,
-          ticketType: ticket.ticket_type,
+          ticketType: cleanPassCategory(ticket.ticket_type),
           entryTime: new Date().toISOString()
         });
         playSound('success');
@@ -300,7 +301,7 @@ export default function StaffDashboard() {
         setResultState('already_used');
         setResultDetails({
           name: ticket.name,
-          ticketType: ticket.ticket_type,
+          ticketType: cleanPassCategory(ticket.ticket_type),
           message: 'Already checked in today at this gate'
         });
         playSound('error');
@@ -308,7 +309,7 @@ export default function StaffDashboard() {
         setResultState('invalid');
         setResultDetails({
           name: ticket.name,
-          ticketType: ticket.ticket_type,
+          ticketType: cleanPassCategory(ticket.ticket_type),
           message: 'Offline verification error'
         });
         playSound('error');
@@ -540,7 +541,7 @@ export default function StaffDashboard() {
                   
                   <div className="mt-3">
                     <span className="inline-block rounded-full bg-pink-500/20 border border-pink-500/30 px-3 py-1 text-xs font-bold text-pink-300">
-                      {resultDetails.ticketType}
+                      {cleanPassCategory(resultDetails.ticketType)}
                     </span>
                   </div>
 

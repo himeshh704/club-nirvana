@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QRCode from 'qrcode';
+import { cleanPassCategory } from '@/lib/formatters';
 
 export default function GuestPage() {
   return (
@@ -72,7 +73,7 @@ function GuestPageContent() {
           setTicketData({
             ticketId: payload.i,
             name: payload.n || 'Valued Guest',
-            ticketType: payload.t || 'Rangilo Raas Pass',
+            ticketType: cleanPassCategory(payload.t) || 'Rangilo Raas Pass',
             validDays: payload.v || 'both'
           });
         }
@@ -108,10 +109,11 @@ function GuestPageContent() {
       if (data.success && data.qrToken) {
         const passLinkUrl = `${window.location.origin}/?ticket=${data.qrToken}`;
         
+        const cleanCategory = cleanPassCategory(data.ticketType || passCategory);
         const ticketInfo = {
           guestName,
           guestPhone,
-          ticketType: passCategory,
+          ticketType: cleanCategory,
           qrToken: data.qrToken,
           passLinkUrl
         };
@@ -123,7 +125,7 @@ function GuestPageContent() {
         let cleanNumber = guestPhone.replace(/\D/g, '');
         if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
 
-        const message = `Hey *${guestName}*! 💃🕺\n\nHere is your official Entry Pass for *RANGILO RAAS 2026* (Organized by *House of Chaos*)!\n\n📅 Dates: *18 & 19 OCT 2026*\n⏰ Time: *7:00 PM ONWARDS*\n🎟️ Pass Category: *${passCategory}*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nYour Pass Link: ${passLinkUrl}\n\nPlease show this QR code at the entrance gate for scanning! See you at the Garba grounds! 🎉`;
+        const message = `Hey *${guestName}*! 💃🕺\n\nHere is your official Entry Pass for *RANGILO RAAS 2026* (Organized by *House of Chaos*)!\n\n📅 Dates: *18 & 19 OCT 2026*\n⏰ Time: *7:00 PM ONWARDS*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nYour Pass Link: ${passLinkUrl}\n\nPlease show this QR code at the entrance gate for scanning! See you at the Garba grounds! 🎉`;
 
         const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
         window.open(waUrl, '_blank');
@@ -153,7 +155,7 @@ function GuestPageContent() {
   const shareWhatsAppAgain = () => {
     const activeToken = generatedToken || ticketToken;
     const name = ticketData?.name || recentGeneratedTicket?.guestName || 'Guest';
-    const type = ticketData?.ticketType || recentGeneratedTicket?.ticketType || 'Rangilo Raas Pass';
+    const type = cleanPassCategory(ticketData?.ticketType || recentGeneratedTicket?.ticketType) || 'Rangilo Raas Pass';
     const phoneNum = recentGeneratedTicket?.guestPhone || '';
     let cleanNumber = phoneNum.replace(/\D/g, '');
     if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
@@ -246,7 +248,7 @@ function GuestPageContent() {
             </div>
 
             <div className="text-center text-[10px] text-zinc-500 font-mono tracking-widest">
-              PASS CATEGORY: {ticketData?.ticketType || recentGeneratedTicket?.ticketType || 'Rangilo Raas Pass'}
+              PASS CATEGORY: {cleanPassCategory(ticketData?.ticketType || recentGeneratedTicket?.ticketType) || 'Rangilo Raas Pass'}
             </div>
           </motion.div>
 

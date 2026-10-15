@@ -19,6 +19,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cleanPassCategory } from '@/lib/formatters';
 
 interface Attendee {
   id: string; // Ticket ID
@@ -226,8 +227,9 @@ export default function AttendeeDirectory() {
     if (cleanNumber.length === 10) {
       cleanNumber = '91' + cleanNumber; // Default to India country code
     }
-    const passLink = `${window.location.origin}/?ticket=${qrToken}`;
-    const message = `Hey *${name}*! 🎬🍿\n\nHere is your entry pass for *${eventSettings.title} - ${eventSettings.subtitle || 'A Bollywood Themed Movie Experience'}* at ${eventSettings.venue}, ${eventSettings.address}.\n\n📅 Date: *16 AUG 2026 (SUNDAY)*\n⏰ Time: *8:00 PM ONWARDS*\n🎟️ Pass Type: *${ticketType}*\n📍 Venue: *${eventSettings.venue}*\n\nPass Link: ${passLink}\n\nPlease keep this QR code ready at the entrance gate for scanning! See you at the movies! 🥂`;
+    const cleanType = cleanPassCategory(ticketType);
+    const passLink = `${window.location.origin}/pass/${qrToken}`;
+    const message = `Hey *${name}*! 💃🕺\n\nHere is your official entry pass for *${eventSettings.title} - ${eventSettings.subtitle || 'THE BIGGEST GARBA FESTIVAL OF JODHPUR'}*!\n\n📅 Event Dates: *18 & 19 OCT 2026*\n⏰ Time: *7:00 PM ONWARDS*\n🎟️ Pass Category: *${cleanType}*\n📍 Venue: *${eventSettings.venue || 'Filos 24/7, Jodhpur, Rajasthan'}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
@@ -425,15 +427,15 @@ export default function AttendeeDirectory() {
                               attendee.ticket_type === 'Couple' ? 'border-pink-500/30 text-pink-400' : 'border-zinc-800 text-zinc-400'
                           }`}>
                           {(attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' || attendee.ticket_type.toLowerCase().includes('table')) && <Sparkles className="h-3 w-3 text-[#cca43b]" />}
-                          {attendee.ticket_type}
+                          {cleanPassCategory(attendee.ticket_type)}
                         </span>
                       </td>
 
                       {/* Payment & Collector */}
                       <td className="py-4 px-4">
                         <div className="space-y-1">
-                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase border ${attendee.payment_method === 'Cash' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-                              attendee.payment_method === 'UPI' ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' :
+                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase border ${attendee.payment_method?.startsWith('Cash') ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                              attendee.payment_method?.startsWith('UPI') ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400' :
                                 'bg-purple-500/10 border-purple-500/30 text-purple-400'
                             }`}>
                             {attendee.payment_method || 'Complimentary'}

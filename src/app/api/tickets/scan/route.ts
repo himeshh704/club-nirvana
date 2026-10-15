@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyQRToken } from '@/lib/qrCrypto';
+import { cleanPassCategory } from '@/lib/formatters';
 
 export async function POST(request: Request) {
   try {
@@ -71,8 +72,8 @@ export async function POST(request: Request) {
       });
     }
 
-    const name = (ticket as any)?.users?.name || payloadName || 'Guest';
-    const ticketType = ticket?.ticket_type || payloadTicketType || 'Rangilo Raas Pass';
+    const name = payloadName || (ticket as any)?.users?.name || 'Guest';
+    const ticketType = cleanPassCategory(ticket?.ticket_type || payloadTicketType || 'Rangilo Raas Pass');
     const validDays = ticket?.valid_days || (payloadTicketType?.toLowerCase().includes('day 1') ? 'day_1' : payloadTicketType?.toLowerCase().includes('day 2') ? 'day_2' : 'both');
 
     // 3. Blacklist check

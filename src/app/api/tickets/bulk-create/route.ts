@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
 import { verifyAdminRequest, extractVIPTableName, checkTableReservationConflict } from '@/lib/ticketValidation';
+import { cleanPassCategory } from '@/lib/formatters';
 import { randomUUID } from 'crypto';
 
 interface BulkGuestInput {
@@ -90,14 +91,17 @@ export async function POST(request: Request) {
             }
           }
 
-          // Check if user exists
+          // Check if user exists with BOTH phone AND name
           const { data: existingUser } = await supabaseAdmin
             .from('users')
-            .select('id')
+            .select('id, name')
             .eq('phone', phone)
+            .ilike('name', name)
             .maybeSingle();
 
           let userId = existingUser?.id;
+
+          const cleanType = cleanPassCategory(ticket_type);
 
           if (userId) {
             // Check if guest already has a ticket of this exact type
@@ -105,7 +109,7 @@ export async function POST(request: Request) {
               .from('tickets')
               .select('id, ticket_type')
               .eq('user_id', userId)
-              .eq('ticket_type', ticket_type)
+              .eq('ticket_type', cleanType)
               .maybeSingle();
 
             if (existingTicket) {
@@ -113,21 +117,21 @@ export async function POST(request: Request) {
                 name,
                 phone,
                 email,
-                ticketType: ticket_type,
+                ticketType: cleanType,
                 status: 'SKIPPED',
-                message: `Guest already has a ${ticket_type} pass`
+                message: `Guest already has a ${cleanType} pass`
               };
             }
           }
 
           const allowedTypes = ['Regular', 'VIP', 'Couple', 'Staff', 'Guest List'];
-          const normalizedTicketType = allowedTypes.includes(ticket_type) || ticket_type.toLowerCase().includes('table')
-            ? ticket_type
-            : ticket_type === 'VVIP'
+          const normalizedTicketType = allowedTypes.includes(cleanType) || cleanType.toLowerCase().includes('table')
+            ? cleanType
+            : cleanType === 'VVIP'
             ? 'VIP'
-            : ticket_type === 'Couple'
+            : cleanType === 'Couple'
             ? 'Couple'
-            : 'Regular';
+            : cleanType || 'Regular';
 
           const ticketId = randomUUID();
           const qrToken = signQRToken({

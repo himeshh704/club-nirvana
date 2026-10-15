@@ -37,6 +37,7 @@ import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { Html5Qrcode } from 'html5-qrcode';
 import { getOfflineTicketByToken, logOfflineCheckin } from '@/lib/indexedDb';
+import { cleanPassCategory } from '@/lib/formatters';
 
 interface DashboardStats {
   totalGuests: number;
@@ -97,15 +98,19 @@ export default function AdminPage() {
   const [age, setAge] = useState('21');
   const [gender, setGender] = useState('Male');
   const [instagram, setInstagram] = useState('');
-  const [ticketType, setTicketType] = useState('Regular');
+  const [ticketType, setTicketType] = useState('2-Day Phase 1 - Solo');
   const [validDays, setValidDays] = useState<'both' | 'day_1' | 'day_2'>('both');
   const [paymentStatus, setPaymentStatus] = useState('Complimentary');
   const [collectedBy, setCollectedBy] = useState('Super Admin');
+  const [ticketPrice, setTicketPrice] = useState('699');
+  const [isCustomPrice, setIsCustomPrice] = useState(false);
   
   // VIP Table state
-  const [tableTier, setTableTier] = useState('Small Table (₹7,999 | ₹2,500 Cover)');
+  const [tableTier, setTableTier] = useState('Small Table (4-6 Guests)');
   const [tableNumber, setTableNumber] = useState('Table 1');
   const [tableGuestCount, setTableGuestCount] = useState('6');
+  const [tablePrice, setTablePrice] = useState('7999');
+  const [isCustomTablePrice, setIsCustomTablePrice] = useState(false);
   
   // Creation States
   const [generating, setGenerating] = useState(false);
@@ -207,10 +212,10 @@ export default function AdminPage() {
           if (!revSummary.byCollector[collector]) {
             revSummary.byCollector[collector] = { cash: 0, upi: 0, comp: 0, total: 0 };
           }
-          if (method === 'Cash') {
+          if (method.startsWith('Cash')) {
             revSummary.cashTotal++;
             revSummary.byCollector[collector].cash++;
-          } else if (method === 'UPI') {
+          } else if (method.startsWith('UPI')) {
             revSummary.upiTotal++;
             revSummary.byCollector[collector].upi++;
           } else {
@@ -565,6 +570,12 @@ export default function AdminPage() {
       return;
     }
 
+    const cleanCategory = cleanPassCategory(ticketType);
+    const effectivePrice = paymentStatus === 'Complimentary' ? '0' : (ticketPrice.trim() || '0');
+    const formattedPaymentMethod = paymentStatus === 'Complimentary' 
+      ? 'Complimentary' 
+      : `${paymentStatus} (₹${effectivePrice})`;
+
     setGenerating(true);
     try {
       const cleanPhone = phone.replace(/\D/g, '');
@@ -580,9 +591,10 @@ export default function AdminPage() {
           age,
           gender,
           instagram: '',
-          ticket_type: ticketType,
+          ticket_type: cleanCategory,
           valid_days: validDays,
-          payment_method: paymentStatus,
+          payment_method: formattedPaymentMethod,
+          price: effectivePrice,
           collected_by: userRole === 'Manager' ? loggedUser : collectedBy
         })
       });
@@ -603,7 +615,7 @@ export default function AdminPage() {
 
         setGeneratedTicket({
           ticketId: data.ticketId,
-          ticketType: data.ticketType,
+          ticketType: cleanPassCategory(data.ticketType),
           qrToken: data.qrToken,
           guestName: data.guestName,
           guestPhone: phone,
@@ -644,11 +656,17 @@ export default function AdminPage() {
       return;
     }
 
+    const cleanTier = cleanPassCategory(tableTier);
+    const fullTableType = `${cleanTier} [${tableNumber} - ${tableGuestCount} Guests]`;
+    const effectiveTablePrice = paymentStatus === 'Complimentary' ? '0' : (tablePrice.trim() || '0');
+    const formattedPaymentMethod = paymentStatus === 'Complimentary' 
+      ? 'Complimentary' 
+      : `${paymentStatus} (₹${effectiveTablePrice})`;
+
     setGenerating(true);
     try {
       const cleanPhone = phone.replace(/\D/g, '');
       const emailValue = `${cleanPhone || Date.now()}@event.com`;
-      const fullTableType = `${tableTier} [${tableNumber} - ${tableGuestCount} Guests]`;
 
       const response = await fetch('/api/tickets/create', {
         method: 'POST',
@@ -662,7 +680,8 @@ export default function AdminPage() {
           instagram: '',
           ticket_type: fullTableType,
           table_number: tableNumber.trim(),
-          payment_method: paymentStatus,
+          payment_method: formattedPaymentMethod,
+          price: effectiveTablePrice,
           collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
         })
       });
@@ -674,12 +693,12 @@ export default function AdminPage() {
 
       const data = await response.json();
       if (data.success) {
-        const passLink = `${window.location.origin}/?ticket=${data.qrToken}`;
+        const passLink = `${window.location.origin}/pass/${data.qrToken}`;
         const qrUrl = await QRCode.toDataURL(data.qrToken, { margin: 2, errorCorrectionLevel: 'L' });
 
         setGeneratedTicket({
           ticketId: data.ticketId,
-          ticketType: fullTableType,
+          ticketType: cleanPassCategory(fullTableType),
           qrToken: data.qrToken,
           guestName: name,
           guestPhone: phone,
@@ -753,7 +772,8 @@ export default function AdminPage() {
       cleanNumber = '91' + cleanNumber; // Default to India prefix if 10 digits
     }
     
-    const message = `Hey *${generatedTicket.guestName}*! 💃🕺\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${generatedTicket.ticketType}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the gate for scanning! See you at the Garba grounds! 🎉`;
+    const cleanCategory = cleanPassCategory(generatedTicket.ticketType);
+    const message = `Hey *${generatedTicket.guestName}*! 💃🕺\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the gate for scanning! See you at the Garba grounds! 🎉`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
@@ -868,8 +888,9 @@ export default function AdminPage() {
   const handleResendWhatsApp = (ticket: any) => {
     let cleanNumber = (ticket.phone || '').replace(/\D/g, '');
     if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+    const cleanCategory = cleanPassCategory(ticket.ticket_type);
     const passLink = `${window.location.origin}/pass/${ticket.qr_token}`;
-    const message = `Hey *${ticket.name}*! 💃🕺\n\nHere is your official entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${ticket.ticket_type}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
+    const message = `Hey *${ticket.name}*! 💃🕺\n\nHere is your official entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
     window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -1300,7 +1321,7 @@ export default function AdminPage() {
                         </td>
                         <td className="p-3.5">
                           <span className="inline-block px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-semibold text-zinc-300">
-                            {t.ticket_type}
+                            {cleanPassCategory(t.ticket_type)}
                           </span>
                         </td>
                         <td className="p-3.5 text-[11px]">
@@ -1314,7 +1335,7 @@ export default function AdminPage() {
                         </td>
                         <td className="p-3.5">
                           <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${
-                            t.payment_method === 'Cash' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            t.payment_method?.startsWith('Cash') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                             t.payment_method?.includes('UPI') ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
                             'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                           }`}>
@@ -1545,30 +1566,139 @@ export default function AdminPage() {
                         if (val.includes('Day 1')) setValidDays('day_1');
                         else if (val.includes('Day 2')) setValidDays('day_2');
                         else setValidDays('both');
+
+                        // Automatically suggest standard base price for tier unless manager/admin set custom
+                        if (val.includes('Complimentary') || val.includes('Staff')) {
+                          setPaymentStatus('Complimentary');
+                          setTicketPrice('0');
+                        } else if (!isCustomPrice) {
+                          if (val.includes('Solo') && val.includes('2-Day')) setTicketPrice('699');
+                          else if (val.includes('Couple') && val.includes('2-Day')) setTicketPrice('999');
+                          else if (val.includes('Group') && val.includes('2-Day')) setTicketPrice('5999');
+                          else if (val.includes('Solo')) setTicketPrice('599');
+                          else if (val.includes('Couple')) setTicketPrice('899');
+                          else if (val.includes('Group')) setTicketPrice('4999');
+                          else if (val.includes('VIP')) setTicketPrice('1500');
+                        }
                       }}
                       className="w-full rounded-xl bg-zinc-950 border border-zinc-900 px-4 py-3 text-sm gold-border-glow text-white font-bold"
                     >
                       <optgroup label="🎟️ 2-DAY PHASE 1 PASSES (18 & 19 OCT)">
-                        <option value="2-Day Phase 1 - Solo (₹699)">2-Day Phase 1 - Solo (₹699/-)</option>
-                        <option value="2-Day Phase 1 - Couple (₹999)">2-Day Phase 1 - Couple (₹999/-)</option>
-                        <option value="2-Day Phase 1 - Group of 10 (₹5,999)">2-Day Phase 1 - Group of 10 (₹5,999/-)</option>
+                        <option value="2-Day Phase 1 - Solo">2-Day Phase 1 - Solo</option>
+                        <option value="2-Day Phase 1 - Couple">2-Day Phase 1 - Couple</option>
+                        <option value="2-Day Phase 1 - Group of 10">2-Day Phase 1 - Group of 10</option>
                       </optgroup>
                       
                       <optgroup label="🎟️ SINGLE DAY EARLY BIRD PASSES">
-                        <option value="Day 1 Early Bird - Solo (₹599)">Day 1 Early Bird - Solo (₹599/-)</option>
-                        <option value="Day 1 Early Bird - Couple (₹899)">Day 1 Early Bird - Couple (₹899/-)</option>
-                        <option value="Day 1 Early Bird - Group of 10 (₹4,999)">Day 1 Early Bird - Group of 10 (₹4,999/-)</option>
-                        <option value="Day 2 Early Bird - Solo (₹599)">Day 2 Early Bird - Solo (₹599/-)</option>
-                        <option value="Day 2 Early Bird - Couple (₹899)">Day 2 Early Bird - Couple (₹899/-)</option>
-                        <option value="Day 2 Early Bird - Group of 10 (₹4,999)">Day 2 Early Bird - Group of 10 (₹4,999/-)</option>
+                        <option value="Day 1 Early Bird - Solo">Day 1 Early Bird - Solo</option>
+                        <option value="Day 1 Early Bird - Couple">Day 1 Early Bird - Couple</option>
+                        <option value="Day 1 Early Bird - Group of 10">Day 1 Early Bird - Group of 10</option>
+                        <option value="Day 2 Early Bird - Solo">Day 2 Early Bird - Solo</option>
+                        <option value="Day 2 Early Bird - Couple">Day 2 Early Bird - Couple</option>
+                        <option value="Day 2 Early Bird - Group of 10">Day 2 Early Bird - Group of 10</option>
                       </optgroup>
 
                       <optgroup label="👑 VIP & SPECIAL PASSES">
+                        <option value="VIP Pass">VIP Pass</option>
                         <option value="VIP Table Pass">VIP Table Pass</option>
                         <option value="Complimentary Pass">Complimentary Pass</option>
                         <option value="Staff Pass">Staff Pass</option>
                       </optgroup>
                     </select>
+                  </div>
+
+                  {/* CUSTOMIZABLE TICKET PRICE SELECTION & INPUT SECTION */}
+                  <div className="rounded-2xl bg-zinc-950/90 border border-amber-500/30 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-xs text-amber-400 uppercase tracking-wider block font-bold flex items-center gap-1.5">
+                          <span>💰 Ticket Price (₹) & Custom Rate</span>
+                        </label>
+                        <p className="text-[10px] text-zinc-500">Internal rate record • Never printed on attendee pass or QR</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomPrice(!isCustomPrice)}
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1 ${
+                          isCustomPrice 
+                            ? 'bg-amber-500 text-black border-amber-400 font-extrabold shadow-[0_0_12px_rgba(245,158,11,0.4)]' 
+                            : 'bg-zinc-900 border-zinc-700 text-amber-300 hover:border-amber-500/50 hover:bg-zinc-850'
+                        }`}
+                      >
+                        <span>{isCustomPrice ? '✓ Custom Price Active' : '✏️ Custom Price Input'}</span>
+                      </button>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[
+                        { label: '₹599', price: '599' },
+                        { label: '₹699', price: '699' },
+                        { label: '₹899', price: '899' },
+                        { label: '₹999', price: '999' },
+                        { label: '₹1,500', price: '1500' },
+                        { label: '₹4,999', price: '4999' },
+                        { label: '₹5,999', price: '5999' },
+                        ...(userRole === 'Admin' ? [{ label: '₹0 (Comp)', price: '0' }] : [])
+                      ].map((preset) => {
+                        const isSelected = !isCustomPrice && ticketPrice === preset.price;
+                        return (
+                          <button
+                            key={preset.price}
+                            type="button"
+                            onClick={() => {
+                              setTicketPrice(preset.price);
+                              setIsCustomPrice(false);
+                              if (preset.price === '0') {
+                                setPaymentStatus('Complimentary');
+                              } else if (paymentStatus === 'Complimentary') {
+                                setPaymentStatus('Cash');
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                              isSelected 
+                                ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]' 
+                                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Interactive Custom Price Input */}
+                    <div className="relative pt-1">
+                      <span className="absolute left-3.5 top-[calc(50%+2px)] -translate-y-1/2 text-amber-400 font-extrabold text-sm">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        placeholder="Enter ticket price (e.g. 750)"
+                        value={ticketPrice}
+                        onChange={(e) => {
+                          setTicketPrice(e.target.value);
+                          setIsCustomPrice(true);
+                          if (e.target.value === '0' && userRole === 'Admin') {
+                            setPaymentStatus('Complimentary');
+                          } else if (paymentStatus === 'Complimentary') {
+                            setPaymentStatus('Cash');
+                          }
+                        }}
+                        className="w-full rounded-xl bg-black border border-amber-500/50 pl-8 pr-28 py-2.5 text-sm font-black text-amber-300 focus:outline-none focus:border-amber-400 shadow-inner"
+                      />
+                      <div className="absolute right-2.5 top-[calc(50%+2px)] -translate-y-1/2 flex items-center gap-1.5">
+                        {isCustomPrice ? (
+                          <span className="text-[10px] font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 uppercase tracking-wider">
+                            Custom Rate
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded">
+                            Standard
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1669,15 +1799,88 @@ export default function AdminPage() {
                 <form onSubmit={handleGenerateTableTicket} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-xs text-amber-400/90 uppercase tracking-wider block font-semibold">Table Tier & Pricing *</label>
+                      <label className="text-xs text-amber-400/90 uppercase tracking-wider block font-semibold">Table Tier & Category *</label>
                       <select
                         value={tableTier}
-                        onChange={(e) => setTableTier(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTableTier(val);
+                          if (!isCustomTablePrice) {
+                            if (val.includes('Small')) setTablePrice('7999');
+                            else if (val.includes('Big')) setTablePrice('11999');
+                          }
+                        }}
                         className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
                       >
-                        <option value="Small Table (₹7,999 | ₹2,500 Cover | 4-6 Guests)">🍾 Small Table — ₹7,999 (₹2,500 Cover Credit | 4 to 6 Guests)</option>
-                        <option value="Big Table (₹11,999 | ₹3,999 Cover | 8-10 Guests)">👑 Big Table — ₹11,999 (₹3,999 Cover Credit | 8 to 10 Guests)</option>
+                        <option value="Small Table (4-6 Guests)">🍾 Small Table (4 to 6 Guests)</option>
+                        <option value="Big Table (8-10 Guests)">👑 Big Table (8 to 10 Guests)</option>
                       </select>
+                    </div>
+
+                    {/* Table Price & Custom Amount Controls */}
+                    <div className="sm:col-span-2 rounded-2xl bg-zinc-950/90 border border-amber-500/30 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs text-amber-400 uppercase tracking-wider block font-bold">
+                            🍾 Table Price (₹) & Custom Rate
+                          </label>
+                          <p className="text-[10px] text-zinc-500">Internal price record • Hidden from attendee pass and QR</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsCustomTablePrice(!isCustomTablePrice)}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${
+                            isCustomTablePrice
+                              ? 'bg-amber-500 text-black border-amber-400 font-extrabold shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                              : 'bg-zinc-900 border-zinc-700 text-amber-300 hover:border-amber-500'
+                          }`}
+                        >
+                          {isCustomTablePrice ? '✓ Custom Table Rate Active' : '✏️ Custom Price Input'}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: '₹7,999 (Small)', price: '7999' },
+                          { label: '₹11,999 (Big)', price: '11999' },
+                          { label: '₹15,000 (VIP Lounge)', price: '15000' }
+                        ].map((preset) => (
+                          <button
+                            key={preset.price}
+                            type="button"
+                            onClick={() => {
+                              setTablePrice(preset.price);
+                              setIsCustomTablePrice(false);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                              !isCustomTablePrice && tablePrice === preset.price
+                                ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+                                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="relative pt-0.5">
+                        <span className="absolute left-3.5 top-[calc(50%+1px)] -translate-y-1/2 text-amber-400 font-extrabold text-sm">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          required
+                          placeholder="Enter table price in ₹"
+                          value={tablePrice}
+                          onChange={(e) => {
+                            setTablePrice(e.target.value);
+                            setIsCustomTablePrice(true);
+                          }}
+                          className="w-full rounded-xl bg-black border border-amber-500/50 pl-8 pr-28 py-2 text-sm font-black text-amber-300 focus:outline-none focus:border-amber-400 shadow-inner"
+                        />
+                        {isCustomTablePrice && (
+                          <span className="absolute right-2.5 top-[calc(50%+1px)] -translate-y-1/2 text-[10px] font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 uppercase">
+                            Custom Rate
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">

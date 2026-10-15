@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
+import { cleanPassCategory } from '@/lib/formatters';
 
 export default function StandalonePassPage({ params }: { params: Promise<{ token: string }> }) {
   const resolvedParams = use(params);
@@ -48,7 +49,7 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
           setTicketData({
             ticketId: payload.i,
             name: payload.n || 'Valued Guest',
-            ticketType: payload.t || 'Rangilo Raas Pass',
+            ticketType: cleanPassCategory(payload.t) || 'Rangilo Raas Pass',
             validDays: payload.v || 'both'
           });
         } else {
@@ -75,7 +76,7 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
 
   const shareWhatsApp = () => {
     const name = ticketData?.name || 'Guest';
-    const type = ticketData?.ticketType || 'Rangilo Raas Pass';
+    const type = cleanPassCategory(ticketData?.ticketType) || 'Rangilo Raas Pass';
     const url = window.location.href;
     const message = `Hey *${name}*! 💃\n\nHere is your Official Entry Pass for *RANGILO RAAS 2026*!\n\n🎟️ Pass Category: *${type}*\n📅 Dates: *18 & 19 OCT 2026*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nView Pass: ${url}`;
     
@@ -191,7 +192,7 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
           </div>
 
           <div className="text-center text-[10px] text-zinc-400 font-mono tracking-widest">
-            PASS CATEGORY: {ticketData?.ticketType || 'Rangilo Raas Pass'}
+            PASS CATEGORY: {cleanPassCategory(ticketData?.ticketType) || 'Rangilo Raas Pass'}
           </div>
         </motion.div>
 
