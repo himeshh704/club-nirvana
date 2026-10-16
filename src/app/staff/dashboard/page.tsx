@@ -287,7 +287,7 @@ export default function StaffDashboard() {
         return;
       }
 
-      const res = await logOfflineCheckin(ticket.id, qrToken, gate, device);
+      const res = await logOfflineCheckin(ticket.id, qrToken, gate, device, activeScanDate);
 
       if (res.status === 'success') {
         setResultState('valid');
@@ -302,7 +302,15 @@ export default function StaffDashboard() {
         setResultDetails({
           name: ticket.name,
           ticketType: cleanPassCategory(ticket.ticket_type),
-          message: 'Already checked in today at this gate'
+          message: `Already checked in today (${activeScanDate}) at this gate`
+        });
+        playSound('error');
+      } else if (res.status === 'invalid_date') {
+        setResultState('invalid');
+        setResultDetails({
+          name: ticket.name,
+          ticketType: cleanPassCategory(ticket.ticket_type),
+          message: `Invalid Pass Date! Pass not valid for ${activeScanDate}.`
         });
         playSound('error');
       } else {

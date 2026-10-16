@@ -27,6 +27,10 @@ interface Attendee {
   phone: string;
   email: string;
   ticket_type: string;
+  raw_ticket_type?: string;
+  valid_days?: 'both' | 'day_1' | 'day_2' | string;
+  day_1_scanned?: boolean;
+  day_2_scanned?: boolean;
   qr_token: string;
   is_used: boolean;
   used_at: string | null;
@@ -136,8 +140,8 @@ export default function AttendeeDirectory() {
     if (filterType === 'All') return matchesSearch;
     if (filterType === 'Checked In') return matchesSearch && item.is_used;
     if (filterType === 'Remaining') return matchesSearch && !item.is_used;
-    if (filterType === 'VIP') return matchesSearch && (item.ticket_type === 'VIP' || item.ticket_type === 'VVIP' || item.ticket_type.toLowerCase().includes('vip') || item.ticket_type.toLowerCase().includes('table'));
-    if (filterType === 'VIP Tables') return matchesSearch && item.ticket_type.toLowerCase().includes('table');
+    if (filterType === 'VIP') return matchesSearch && (item.ticket_type === 'VIP' || item.ticket_type === 'VVIP' || item.ticket_type.toLowerCase().includes('vip') || item.ticket_type.toLowerCase().includes('table') || item.ticket_type.toLowerCase().includes('group'));
+    if (filterType === 'Groups & VIP Tables' || filterType === 'VIP Tables') return matchesSearch && (item.ticket_type.toLowerCase().includes('table') || item.ticket_type.toLowerCase().includes('group'));
     if (filterType === 'Blacklisted') return matchesSearch && item.is_banned;
     return matchesSearch;
   });
@@ -222,14 +226,21 @@ export default function AttendeeDirectory() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleSendWhatsApp = (name: string, phone: string, qrToken: string, ticketType: string) => {
+  const handleSendWhatsApp = (name: string, phone: string, qrToken: string, ticketType: string, validDays?: string) => {
     let cleanNumber = phone.replace(/\D/g, '');
     if (cleanNumber.length === 10) {
       cleanNumber = '91' + cleanNumber; // Default to India country code
     }
     const cleanType = cleanPassCategory(ticketType);
     const passLink = `${window.location.origin}/pass/${qrToken}`;
-    const message = `Hey *${name}*! 💃🕺\n\nHere is your official entry pass for *${eventSettings.title} - ${eventSettings.subtitle || 'THE BIGGEST GARBA FESTIVAL OF JODHPUR'}*!\n\n📅 Event Dates: *18 & 19 OCT 2026*\n⏰ Time: *7:00 PM ONWARDS*\n🎟️ Pass Category: *${cleanType}*\n📍 Venue: *${eventSettings.venue || 'Filos 24/7, Jodhpur, Rajasthan'}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
+
+    const dateStr = validDays === 'day_1'
+      ? '18 OCT 2026 (Day 1 Only)'
+      : validDays === 'day_2'
+      ? '19 OCT 2026 (Day 2 Only)'
+      : '18 & 19 OCT 2026 (Both Days)';
+
+    const message = `Hey *${name}*! 💃🕺\n\nHere is your official entry pass for *${eventSettings.title} - ${eventSettings.subtitle || 'THE BIGGEST GARBA FESTIVAL OF JODHPUR'}*!\n\n📅 Event Date: *${dateStr}*\n⏰ Time: *7:00 PM ONWARDS*\n🎟️ Pass Category: *${cleanType}*\n📍 Venue: *${eventSettings.venue || 'Filos 24/7, Jodhpur, Rajasthan'}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
@@ -241,13 +252,14 @@ export default function AttendeeDirectory() {
       return;
     }
 
-    const headers = ['Ticket ID', 'Name', 'Phone', 'Email', 'Ticket Type', 'Payment Method', 'Collected By', 'Checked In', 'Check-in Time', 'Banned Status'];
+    const headers = ['Ticket ID', 'Name', 'Phone', 'Email', 'Ticket Type', 'Valid Dates', 'Payment Method', 'Collected By', 'Checked In', 'Check-in Time', 'Banned Status'];
     const rows = filteredAttendees.map(a => [
       a.id,
       `"${a.name}"`,
       `"${a.phone}"`,
       a.email,
       `"${a.ticket_type}"`,
+      `"${a.valid_days === 'day_1' ? '18 Oct 2026 (Day 1 Only)' : a.valid_days === 'day_2' ? '19 Oct 2026 (Day 2 Only)' : '18 & 19 Oct 2026 (Both Days)'}"`,
       `"${a.payment_method || 'Complimentary'}"`,
       `"${a.collected_by || 'Super Admin'}"`,
       a.is_used ? 'YES' : 'NO',
@@ -356,7 +368,7 @@ export default function AttendeeDirectory() {
 
           {/* Filter Categories */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            {['All', 'Checked In', 'Remaining', 'VIP', 'VIP Tables', 'Blacklisted'].map((type) => (
+            {['All', 'Checked In', 'Remaining', 'VIP', 'Groups & VIP Tables', 'Blacklisted'].map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
@@ -378,7 +390,7 @@ export default function AttendeeDirectory() {
           </div>
         </div>
 
-        {filterType.includes('VIP') && (
+        {(filterType.includes('VIP') || filterType.includes('Group')) && (
           <div className="mb-4 rounded-2xl bg-[#cca43b]/10 border border-[#cca43b]/30 px-5 py-3 text-xs text-[#ffe082] font-bold flex items-center justify-between">
             <span>🍾 {filterType} Passes Booked: {filteredAttendees.length}</span>
             <span>Total Expected Headcount (Pax): {filteredAttendees.reduce((sum, a) => sum + (a.ticket_type?.match(/-\s*(\d+)\s*Guests?/i)?.[1] ? +a.ticket_type.match(/-\s*(\d+)\s*Guests?/i)![1] : 1), 0)}</span>
@@ -392,7 +404,7 @@ export default function AttendeeDirectory() {
               <thead>
                 <tr className="border-b border-zinc-900 text-zinc-500 text-xs font-semibold uppercase bg-black/20 whitespace-nowrap">
                   <th className="py-4 px-6">Attendee Info</th>
-                  <th className="py-4 px-4">Ticket Type</th>
+                  <th className="py-4 px-4">Ticket Type & Dates</th>
                   <th className="py-4 px-4">Payment & Collector</th>
                   <th className="py-4 px-4">Pass Sharing Link</th>
                   <th className="py-4 px-4">Gate Status</th>
@@ -420,15 +432,36 @@ export default function AttendeeDirectory() {
                         </div>
                       </td>
 
-                      {/* Ticket Type */}
+                      {/* Ticket Type & Dates */}
                       <td className="py-4 px-4">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border font-medium ${attendee.ticket_type.toLowerCase().includes('table') ? 'border-amber-500/60 text-amber-300 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.25)] font-bold' :
-                            attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' ? 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/5' :
-                              attendee.ticket_type === 'Couple' ? 'border-pink-500/30 text-pink-400' : 'border-zinc-800 text-zinc-400'
+                        <div className="space-y-1.5">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs border font-medium ${
+                            attendee.ticket_type.toLowerCase().includes('table') || attendee.ticket_type.toLowerCase().includes('group')
+                              ? 'border-amber-500/60 text-amber-300 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.25)] font-bold'
+                              : attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP'
+                              ? 'border-[#cca43b] text-[#ffe082] bg-[#cca43b]/5'
+                              : attendee.ticket_type === 'Couple'
+                              ? 'border-pink-500/30 text-pink-400'
+                              : 'border-zinc-800 text-zinc-400'
                           }`}>
-                          {(attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' || attendee.ticket_type.toLowerCase().includes('table')) && <Sparkles className="h-3 w-3 text-[#cca43b]" />}
-                          {cleanPassCategory(attendee.ticket_type)}
-                        </span>
+                            {(attendee.ticket_type === 'VIP' || attendee.ticket_type === 'VVIP' || attendee.ticket_type.toLowerCase().includes('table') || attendee.ticket_type.toLowerCase().includes('group')) && (
+                              <Sparkles className="h-3 w-3 text-[#cca43b]" />
+                            )}
+                            {cleanPassCategory(attendee.ticket_type)}
+                          </span>
+
+                          <div>
+                            <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                              attendee.valid_days === 'day_1'
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                                : attendee.valid_days === 'day_2'
+                                ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
+                                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                            }`}>
+                              📅 {attendee.valid_days === 'day_1' ? '18 Oct (Day 1)' : attendee.valid_days === 'day_2' ? '19 Oct (Day 2)' : '18 & 19 Oct (Both Days)'}
+                            </span>
+                          </div>
+                        </div>
                       </td>
 
                       {/* Payment & Collector */}
@@ -467,7 +500,7 @@ export default function AttendeeDirectory() {
                           </button>
 
                           <button
-                            onClick={() => handleSendWhatsApp(attendee.name, attendee.phone, attendee.qr_token, attendee.ticket_type)}
+                            onClick={() => handleSendWhatsApp(attendee.name, attendee.phone, attendee.qr_token, attendee.ticket_type, attendee.valid_days)}
                             className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 cursor-pointer"
                           >
                             <MessageSquare className="h-3.5 w-3.5" />

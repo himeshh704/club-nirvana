@@ -78,7 +78,12 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
     const name = ticketData?.name || 'Guest';
     const type = cleanPassCategory(ticketData?.ticketType) || 'Rangilo Raas Pass';
     const url = window.location.href;
-    const message = `Hey *${name}*! 💃\n\nHere is your Official Entry Pass for *RANGILO RAAS 2026*!\n\n🎟️ Pass Category: *${type}*\n📅 Dates: *18 & 19 OCT 2026*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nView Pass: ${url}`;
+    const datesStr = ticketData?.validDays === 'day_1'
+      ? '18 OCT 2026 (Day 1 Only)'
+      : ticketData?.validDays === 'day_2'
+      ? '19 OCT 2026 (Day 2 Only)'
+      : '18 & 19 OCT 2026 (Both Days)';
+    const message = `Hey *${name}*! 💃\n\nHere is your Official Entry Pass for *RANGILO RAAS 2026*!\n\n🎟️ Pass Category: *${type}*\n📅 Dates: *${datesStr}*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nView Pass: ${url}`;
     
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -154,7 +159,13 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
               <Calendar className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
               <div>
                 <div className="text-[9px] font-bold text-zinc-400 uppercase">DATES</div>
-                <div className="text-xs font-black text-white">18 & 19 OCT 2026</div>
+                <div className="text-xs font-black text-white">
+                  {ticketData?.validDays === 'day_1' 
+                    ? '18 OCT 2026 (DAY 1)' 
+                    : ticketData?.validDays === 'day_2' 
+                    ? '19 OCT 2026 (DAY 2)' 
+                    : '18 & 19 OCT 2026'}
+                </div>
               </div>
             </div>
 

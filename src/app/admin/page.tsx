@@ -105,18 +105,20 @@ export default function AdminPage() {
   const [ticketPrice, setTicketPrice] = useState('699');
   const [isCustomPrice, setIsCustomPrice] = useState(false);
   
-  // VIP Table state
-  const [tableTier, setTableTier] = useState('Small Table (4-6 Guests)');
+  // Group & VIP Table state
+  const [tableTier, setTableTier] = useState('Small Group / Table (4-6 Guests)');
   const [tableNumber, setTableNumber] = useState('Table 1');
   const [tableGuestCount, setTableGuestCount] = useState('6');
   const [tablePrice, setTablePrice] = useState('7999');
   const [isCustomTablePrice, setIsCustomTablePrice] = useState(false);
+  const [tableValidDays, setTableValidDays] = useState<'both' | 'day_1' | 'day_2'>('both');
   
   // Creation States
   const [generating, setGenerating] = useState(false);
   const [generatedTicket, setGeneratedTicket] = useState<{
     ticketId: string;
     ticketType: string;
+    validDays?: 'both' | 'day_1' | 'day_2';
     qrToken: string;
     guestName: string;
     guestPhone: string;
@@ -188,8 +190,8 @@ export default function AdminPage() {
 
         const total = list.length;
         const checked = list.filter((t: any) => t.is_used).length;
-        const vip = list.filter((t: any) => /vip|table/i.test(t.ticket_type || '')).length;
-        const vipPax = list.reduce((sum: number, t: any) => sum + (/vip|table/i.test(t.ticket_type || '') ? +(t.ticket_type?.match(/-\s*(\d+)\s*Guests?/i)?.[1] || 1) : 0), 0);
+        const vip = list.filter((t: any) => /vip|table|group/i.test(t.ticket_type || '')).length;
+        const vipPax = list.reduce((sum: number, t: any) => sum + (/vip|table|group/i.test(t.ticket_type || '') ? +(t.ticket_type?.match(/-\s*(\d+)\s*Guests?/i)?.[1] || 1) : 0), 0);
         
         setStats({
           totalGuests: total,
@@ -616,6 +618,7 @@ export default function AdminPage() {
         setGeneratedTicket({
           ticketId: data.ticketId,
           ticketType: cleanPassCategory(data.ticketType),
+          validDays: validDays,
           qrToken: data.qrToken,
           guestName: data.guestName,
           guestPhone: phone,
@@ -646,18 +649,20 @@ export default function AdminPage() {
   const handleGenerateTableTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) {
-      alert('Please enter Primary Host Name and Phone Number.');
+      alert('Please enter Primary Host / Group Leader Name and Phone Number.');
       return;
     }
 
     const parsedAge = parseInt(String(age), 10);
     if (isNaN(parsedAge) || parsedAge < 21) {
-      alert('Age Limit Restriction: Primary Host and VIP Table guests must be 21 years of age or older.');
+      alert('Age Limit Restriction: Primary Host / Group Leader must be 21 years of age or older.');
       return;
     }
 
     const cleanTier = cleanPassCategory(tableTier);
-    const fullTableType = `${cleanTier} [${tableNumber} - ${tableGuestCount} Guests]`;
+    const datePrefix = tableValidDays === 'day_1' ? 'Day 1' : tableValidDays === 'day_2' ? 'Day 2' : '2-Day';
+    const groupIdentifier = tableNumber.trim() || 'Group Reservation';
+    const fullTableType = `${datePrefix} - ${cleanTier} [${groupIdentifier} - ${tableGuestCount} Guests]`;
     const effectiveTablePrice = paymentStatus === 'Complimentary' ? '0' : (tablePrice.trim() || '0');
     const formattedPaymentMethod = paymentStatus === 'Complimentary' 
       ? 'Complimentary' 
@@ -679,7 +684,8 @@ export default function AdminPage() {
           gender,
           instagram: '',
           ticket_type: fullTableType,
-          table_number: tableNumber.trim(),
+          table_number: groupIdentifier,
+          valid_days: tableValidDays,
           payment_method: formattedPaymentMethod,
           price: effectiveTablePrice,
           collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
@@ -688,7 +694,7 @@ export default function AdminPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create VIP Table pass');
+        throw new Error(errorData.error || 'Failed to create Group / VIP Table pass');
       }
 
       const data = await response.json();
@@ -699,6 +705,7 @@ export default function AdminPage() {
         setGeneratedTicket({
           ticketId: data.ticketId,
           ticketType: cleanPassCategory(fullTableType),
+          validDays: tableValidDays,
           qrToken: data.qrToken,
           guestName: name,
           guestPhone: phone,
@@ -712,8 +719,8 @@ export default function AdminPage() {
         fetchMetrics();
       }
     } catch (err: any) {
-      console.error('Error creating table pass:', err);
-      alert(err.message || 'Error creating VIP Table reservation');
+      console.error('Error creating group/table pass:', err);
+      alert(err.message || 'Error creating Group / VIP Table reservation');
     } finally {
       setGenerating(false);
     }
@@ -773,7 +780,16 @@ export default function AdminPage() {
     }
     
     const cleanCategory = cleanPassCategory(generatedTicket.ticketType);
-    const message = `Hey *${generatedTicket.guestName}*! 💃🕺\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the gate for scanning! See you at the Garba grounds! 🎉`;
+    let dateStr = brandDate;
+    if (generatedTicket.validDays === 'day_1' || cleanCategory.toLowerCase().includes('day 1')) {
+      dateStr = '18 OCT 2026 (Day 1 Only)';
+    } else if (generatedTicket.validDays === 'day_2' || cleanCategory.toLowerCase().includes('day 2')) {
+      dateStr = '19 OCT 2026 (Day 2 Only)';
+    } else if (generatedTicket.validDays === 'both' || cleanCategory.toLowerCase().includes('2-day')) {
+      dateStr = '18 & 19 OCT 2026 (Both Days)';
+    }
+
+    const message = `Hey *${generatedTicket.guestName}*! 💃🕺\n\nHere is your entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${dateStr}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${generatedTicket.linkUrl}\n\nPlease keep this QR code ready at the gate for scanning! See you at the Garba grounds! 🎉`;
     const waUrl = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
   };
@@ -890,7 +906,15 @@ export default function AdminPage() {
     if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
     const cleanCategory = cleanPassCategory(ticket.ticket_type);
     const passLink = `${window.location.origin}/pass/${ticket.qr_token}`;
-    const message = `Hey *${ticket.name}*! 💃🕺\n\nHere is your official entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${brandDate}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
+    let dateStr = brandDate;
+    if (ticket.valid_days === 'day_1' || cleanCategory.toLowerCase().includes('day 1')) {
+      dateStr = '18 OCT 2026 (Day 1 Only)';
+    } else if (ticket.valid_days === 'day_2' || cleanCategory.toLowerCase().includes('day 2')) {
+      dateStr = '19 OCT 2026 (Day 2 Only)';
+    } else if (ticket.valid_days === 'both' || cleanCategory.toLowerCase().includes('2-day')) {
+      dateStr = '18 & 19 OCT 2026 (Both Days)';
+    }
+    const message = `Hey *${ticket.name}*! 💃🕺\n\nHere is your official entry pass for *${brandTitle} - ${brandSubtitle}*!\n\n📅 Event Dates: *${dateStr}*\n⏰ Time: *${brandTime}*\n🎟️ Pass Category: *${cleanCategory}*\n📍 Venue: *${brandVenue}, ${brandAddress}*\n\nPass Link: ${passLink}\n\nPlease keep your QR code ready at the gate for scanning! See you at Rangilo Raas 2026! 🎉`;
     window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -969,8 +993,9 @@ export default function AdminPage() {
     if (attendeeStatusFilter === '2-Day Pass') return t.valid_days === 'both' || (t.ticket_type || '').toLowerCase().includes('2-day');
     if (attendeeStatusFilter === 'Day 1 Only') return t.valid_days === 'day_1' || (t.ticket_type || '').toLowerCase().includes('day 1');
     if (attendeeStatusFilter === 'Day 2 Only') return t.valid_days === 'day_2' || (t.ticket_type || '').toLowerCase().includes('day 2');
-    if (attendeeStatusFilter === 'Cash') return t.payment_method === 'Cash';
-    if (attendeeStatusFilter === 'UPI') return t.payment_method === 'UPI' || (t.payment_method || '').includes('UPI');
+    if (attendeeStatusFilter === 'Groups & Tables') return /table|group/i.test(t.ticket_type || '');
+    if (attendeeStatusFilter === 'Cash') return (t.payment_method || '').startsWith('Cash');
+    if (attendeeStatusFilter === 'UPI') return (t.payment_method || '').startsWith('UPI') || (t.payment_method || '').includes('UPI');
 
     return true;
   });
@@ -1214,7 +1239,7 @@ export default function AdminPage() {
               {tab === 'create' && '🎟️ CREATE PASS'}
               {tab === 'attendees' && '👥 ATTENDEE LIST'}
               {tab === 'reports' && '📊 REPORTS & AUDIT'}
-              {tab === 'tables' && '👑 VIP TABLES'}
+              {tab === 'tables' && '👥 GROUPS & VIP TABLES'}
               {tab === 'live' && '⚡ LIVE GATE'}
               {tab === 'bulk' && '📁 BULK IMPORT'}
               {tab === 'branding' && '🎨 BRANDING'}
@@ -1267,6 +1292,7 @@ export default function AdminPage() {
                   <option value="All">All Statuses & Types</option>
                   <option value="Checked In">Checked In Only</option>
                   <option value="Remaining">Remaining (Not Checked In)</option>
+                  <option value="Groups & Tables">Groups & VIP Tables</option>
                   <option value="2-Day Pass">2-Day Season Passes (18 & 19 Oct)</option>
                   <option value="Day 1 Only">Day 1 Passes (18 Oct Only)</option>
                   <option value="Day 2 Only">Day 2 Passes (19 Oct Only)</option>
@@ -1605,6 +1631,52 @@ export default function AdminPage() {
                         <option value="Staff Pass">Staff Pass</option>
                       </optgroup>
                     </select>
+
+                    {/* Date Validity Segmented Toggle */}
+                    <div className="pt-2">
+                      <label className="text-[11px] text-amber-400 uppercase tracking-wider block font-bold mb-1.5 flex items-center justify-between">
+                        <span>📅 Pass Date Validity</span>
+                        <span className="text-[10px] text-zinc-500 font-normal">Gate scan check</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setValidDays('day_1')}
+                          className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                            validDays === 'day_1'
+                              ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="font-extrabold">📅 Day 1</span>
+                          <span className="text-[9px] opacity-80">18 Oct</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setValidDays('day_2')}
+                          className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                            validDays === 'day_2'
+                              ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="font-extrabold">📅 Day 2</span>
+                          <span className="text-[9px] opacity-80">19 Oct</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setValidDays('both')}
+                          className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                            validDays === 'both'
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="font-extrabold">✨ Both Days</span>
+                          <span className="text-[9px] opacity-80">18 & 19 Oct</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   {/* CUSTOMIZABLE TICKET PRICE SELECTION & INPUT SECTION */}
@@ -1785,65 +1857,148 @@ export default function AdminPage() {
               <div className="glass-panel rounded-3xl p-6 border border-amber-500/30 bg-gradient-to-b from-amber-950/20 to-zinc-950 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-amber-500/20 pb-4 mb-6">
                   <div className="flex items-center gap-2.5">
-                    <Sparkles className="h-5 w-5 text-amber-400 animate-pulse" />
+                    <Users className="h-5 w-5 text-amber-400" />
                     <div>
-                      <h3 className="text-lg font-extrabold tracking-wide text-amber-400">VIP TABLE RESERVATION & QR GENERATOR</h3>
-                      <p className="text-[11px] text-zinc-400">Separate booking desk with Table Number, Size & Guest Count</p>
+                      <h3 className="text-lg font-extrabold tracking-wide text-amber-400">GROUP & VIP TABLE BOOKING (4 TO 15+ GUESTS)</h3>
+                      <p className="text-[11px] text-zinc-400">Bookings for groups, friends, families & VIP tables with dedicated host pass & custom guest capacity</p>
                     </div>
                   </div>
                   <span className="text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    BOTTLE SERVICE & ESCORT
+                    👥 GROUP PASS & VIP SERVICE
                   </span>
                 </div>
 
                 <form onSubmit={handleGenerateTableTicket} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Event Date Validity Selector */}
                     <div className="space-y-1.5 sm:col-span-2">
-                      <label className="text-xs text-amber-400/90 uppercase tracking-wider block font-semibold">Table Tier & Category *</label>
+                      <label className="text-xs text-amber-400 uppercase tracking-wider block font-bold flex items-center justify-between">
+                        <span>📅 Select Event Date Validity *</span>
+                        <span className="text-[10px] text-zinc-400 font-normal">Controls entrance date verification</span>
+                      </label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTableValidDays('day_1');
+                            if (!isCustomTablePrice) {
+                              setTablePrice(tableTier.includes('Big') ? '7999' : tableTier.includes('Large') ? '9999' : '4999');
+                            }
+                          }}
+                          className={`py-3 px-3 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            tableValidDays === 'day_1'
+                              ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] scale-[1.02]'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="font-extrabold text-sm">📅 Day 1 Only</span>
+                          <span className="text-[10px] font-semibold opacity-85">18 Oct 2026 (Sat)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTableValidDays('day_2');
+                            if (!isCustomTablePrice) {
+                              setTablePrice(tableTier.includes('Big') ? '7999' : tableTier.includes('Large') ? '9999' : '4999');
+                            }
+                          }}
+                          className={`py-3 px-3 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            tableValidDays === 'day_2'
+                              ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] scale-[1.02]'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="font-extrabold text-sm">📅 Day 2 Only</span>
+                          <span className="text-[10px] font-semibold opacity-85">19 Oct 2026 (Sun)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTableValidDays('both');
+                            if (!isCustomTablePrice) {
+                              setTablePrice(tableTier.includes('Big') ? '11999' : tableTier.includes('Large') ? '15000' : '7999');
+                            }
+                          }}
+                          className={`py-3 px-3 rounded-xl text-xs font-bold border transition flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            tableValidDays === 'both'
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-black border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.45)] scale-[1.02]'
+                              : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="font-extrabold text-sm">✨ Both Days</span>
+                          <span className="text-[10px] font-semibold opacity-85">18 & 19 Oct (Full)</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-xs text-amber-400/90 uppercase tracking-wider block font-semibold">Group / Table Tier & Size *</label>
                       <select
                         value={tableTier}
                         onChange={(e) => {
                           const val = e.target.value;
                           setTableTier(val);
                           if (!isCustomTablePrice) {
-                            if (val.includes('Small')) setTablePrice('7999');
-                            else if (val.includes('Big')) setTablePrice('11999');
+                            if (tableValidDays === 'both') {
+                              if (val.includes('Small')) setTablePrice('7999');
+                              else if (val.includes('Medium')) setTablePrice('9999');
+                              else if (val.includes('Big')) setTablePrice('11999');
+                              else if (val.includes('Large')) setTablePrice('15000');
+                              else setTablePrice('9999');
+                            } else {
+                              if (val.includes('Small')) setTablePrice('4999');
+                              else if (val.includes('Medium')) setTablePrice('5999');
+                              else if (val.includes('Big')) setTablePrice('7999');
+                              else if (val.includes('Large')) setTablePrice('9999');
+                              else setTablePrice('5999');
+                            }
                           }
                         }}
                         className="w-full rounded-xl bg-zinc-950 border border-amber-500/40 px-4 py-3 text-sm text-amber-300 font-semibold focus:outline-none focus:border-amber-400"
                       >
-                        <option value="Small Table (4-6 Guests)">🍾 Small Table (4 to 6 Guests)</option>
-                        <option value="Big Table (8-10 Guests)">👑 Big Table (8 to 10 Guests)</option>
+                        <option value="Small Group / Table (4-6 Guests)">👥 Small Group / Table (4 to 6 Guests)</option>
+                        <option value="Medium Group / Table (6-8 Guests)">👥 Medium Group / Table (6 to 8 Guests)</option>
+                        <option value="Big Group / Table (8-10 Guests)">👑 Big Group / Table (8 to 10 Guests)</option>
+                        <option value="Large Group / VIP Lounge (10-15 Guests)">🍾 Large Group / VIP Lounge (10 to 15 Guests)</option>
+                        <option value="Custom Group Pass">✨ Custom Group Pass (Any Group Size)</option>
                       </select>
                     </div>
 
-                    {/* Table Price & Custom Amount Controls */}
+                    {/* Table / Group Price & Custom Amount Controls */}
                     <div className="sm:col-span-2 rounded-2xl bg-zinc-950/90 border border-amber-500/30 p-3.5 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <div>
                           <label className="text-xs text-amber-400 uppercase tracking-wider block font-bold">
-                            🍾 Table Price (₹) & Custom Rate
+                            💰 Group Booking Price (₹) & Custom Rate
                           </label>
                           <p className="text-[10px] text-zinc-500">Internal price record • Hidden from attendee pass and QR</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setIsCustomTablePrice(!isCustomTablePrice)}
-                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
                             isCustomTablePrice
                               ? 'bg-amber-500 text-black border-amber-400 font-extrabold shadow-[0_0_10px_rgba(245,158,11,0.3)]'
                               : 'bg-zinc-900 border-zinc-700 text-amber-300 hover:border-amber-500'
                           }`}
                         >
-                          {isCustomTablePrice ? '✓ Custom Table Rate Active' : '✏️ Custom Price Input'}
+                          {isCustomTablePrice ? '✓ Custom Rate Active' : '✏️ Custom Price Input'}
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { label: '₹7,999 (Small)', price: '7999' },
-                          { label: '₹11,999 (Big)', price: '11999' },
-                          { label: '₹15,000 (VIP Lounge)', price: '15000' }
-                        ].map((preset) => (
+                        {(tableValidDays === 'both' ? [
+                          { label: '₹7,999 (Small Group / 4-6)', price: '7999' },
+                          { label: '₹9,999 (Medium Group / 6-8)', price: '9999' },
+                          { label: '₹11,999 (Big Group / 8-10)', price: '11999' },
+                          { label: '₹15,000 (VIP Lounge / 10-15)', price: '15000' }
+                        ] : [
+                          { label: '₹4,999 (Small Group / 4-6)', price: '4999' },
+                          { label: '₹5,999 (Medium Group / 6-8)', price: '5999' },
+                          { label: '₹7,999 (Big Group / 8-10)', price: '7999' },
+                          { label: '₹9,999 (VIP Lounge / 10-15)', price: '9999' }
+                        ]).map((preset) => (
                           <button
                             key={preset.price}
                             type="button"
@@ -1851,7 +2006,7 @@ export default function AdminPage() {
                               setTablePrice(preset.price);
                               setIsCustomTablePrice(false);
                             }}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition ${
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition cursor-pointer ${
                               !isCustomTablePrice && tablePrice === preset.price
                                 ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
                                 : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
@@ -1867,7 +2022,7 @@ export default function AdminPage() {
                           type="number"
                           min="0"
                           required
-                          placeholder="Enter table price in ₹"
+                          placeholder="Enter group booking price in ₹"
                           value={tablePrice}
                           onChange={(e) => {
                             setTablePrice(e.target.value);
@@ -1884,11 +2039,11 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Table Number / Location *</label>
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Group Name or Table # / Location *</label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Table 1, VIP Booth 4"
+                        placeholder="e.g. Table 1, Sharma Group, VIP Booth 4, College Gang"
                         value={tableNumber}
                         onChange={(e) => setTableNumber(e.target.value)}
                         className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
@@ -1896,13 +2051,13 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Total Guest Count *</label>
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Total Group Members / Guests *</label>
                       <input
                         type="number"
                         required
                         min="1"
                         max="32"
-                        placeholder="e.g. 6 (Small) or 10 (Big)"
+                        placeholder="e.g. 6 (Small), 8 (Medium), 10 (Big)"
                         value={tableGuestCount}
                         onChange={(e) => setTableGuestCount(e.target.value)}
                         className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-sm focus:border-amber-400"
@@ -1910,7 +2065,7 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Primary Host Name *</label>
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Primary Host / Group Leader Name *</label>
                       <input
                         type="text"
                         required
@@ -1922,7 +2077,7 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Primary Host WhatsApp / Phone *</label>
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Primary Host / Group Leader WhatsApp *</label>
                       <input
                         type="tel"
                         required
@@ -1934,7 +2089,7 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Host Age (21+ Only) *</label>
+                      <label className="text-xs text-zinc-400 uppercase tracking-wider block">Host / Leader Age (21+ Only) *</label>
                       <input
                         type="number"
                         required
@@ -1990,9 +2145,9 @@ export default function AdminPage() {
                   <button
                     type="submit"
                     disabled={generating}
-                    className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 py-4 text-sm font-extrabold tracking-wider text-black shadow-lg shadow-amber-500/20 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50"
+                    className="mt-4 w-full rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 py-4 text-sm font-extrabold tracking-wider text-black shadow-lg shadow-amber-500/20 transition-all hover:brightness-110 active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
-                    {generating ? 'RESERVING VIP TABLE & SIGNING QR...' : '🍾 GENERATE VIP TABLE PASS & QR'}
+                    {generating ? 'BOOKING GROUP PASS & SIGNING QR...' : '👥 GENERATE GROUP & VIP TABLE PASS & QR'}
                   </button>
                 </form>
               </div>

@@ -6,6 +6,9 @@ export interface OfflineTicket {
   name: string;
   phone: string;
   ticket_type: string;
+  valid_days?: 'both' | 'day_1' | 'day_2' | string;
+  day_1_scanned?: boolean;
+  day_2_scanned?: boolean;
   qr_token: string;
   is_used: boolean;
   used_at: string | null;
@@ -102,8 +105,9 @@ export async function logOfflineCheckin(
   ticketId: string,
   qrToken: string,
   gate: string,
-  scannerDevice: string
-): Promise<{ status: 'success' | 'already_used' | 'banned' | 'not_found' }> {
+  scannerDevice: string,
+  scanDate: string = 'Oct 18'
+): Promise<{ status: 'success' | 'already_used' | 'invalid_date' | 'banned' | 'not_found' }> {
   const db = await getDB();
   if (!db) return { status: 'not_found' };
 
@@ -117,13 +121,39 @@ export async function logOfflineCheckin(
     return { status: 'banned' };
   }
 
-  if (ticket.is_used) {
+  const validDays = ticket.valid_days || (
+    ticket.ticket_type.toLowerCase().includes('day 1') ? 'day_1' :
+    ticket.ticket_type.toLowerCase().includes('day 2') ? 'day_2' : 'both'
+  );
+
+  // Date validity check
+  if (scanDate === 'Oct 18' && validDays === 'day_2') {
+    return { status: 'invalid_date' };
+  }
+  if (scanDate === 'Oct 19' && validDays === 'day_1') {
+    return { status: 'invalid_date' };
+  }
+
+  // Duplicate entry check
+  if (scanDate === 'Oct 18' && ticket.day_1_scanned) {
+    return { status: 'already_used' };
+  }
+  if (scanDate === 'Oct 19' && ticket.day_2_scanned) {
+    return { status: 'already_used' };
+  }
+  if (validDays !== 'both' && ticket.is_used) {
     return { status: 'already_used' };
   }
 
   // Update ticket as used locally
+  const now = new Date().toISOString();
+  if (scanDate === 'Oct 18') {
+    ticket.day_1_scanned = true;
+  } else {
+    ticket.day_2_scanned = true;
+  }
   ticket.is_used = true;
-  ticket.used_at = new Date().toISOString();
+  ticket.used_at = now;
 
   const tx = db.transaction(['tickets', 'checkins'], 'readwrite');
   await tx.objectStore('tickets').put(ticket);
@@ -134,7 +164,7 @@ export async function logOfflineCheckin(
     scanner_device: scannerDevice,
     gate: gate,
     online_or_offline: 'offline',
-    timestamp: new Date().toISOString(),
+    timestamp: now,
     synced: false
   };
 
