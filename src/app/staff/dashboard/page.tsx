@@ -15,7 +15,8 @@ import {
   FolderDown,
   UserCheck,
   Smartphone,
-  Calendar
+  Calendar,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -28,7 +29,7 @@ import {
   getUnsyncedCheckins
 } from '@/lib/indexedDb';
 import { syncOfflineScans } from '@/lib/syncEngine';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getGroupDetails } from '@/lib/formatters';
 
 type ScanResultState = 'idle' | 'valid' | 'already_used' | 'invalid' | 'banned' | 'invalid_date';
 
@@ -36,6 +37,9 @@ interface ScanDetails {
   name: string;
   ticketType: string;
   validDays?: string;
+  guestCount?: number;
+  groupName?: string;
+  isGroup?: boolean;
   entryTime?: string;
   usedAt?: string;
   message?: string;
@@ -218,12 +222,17 @@ export default function StaffDashboard() {
 
         const data = await res.json();
 
+        const groupDetails = getGroupDetails(data.ticketType, data.guestCount, data.groupName);
+
         if (data.status === 'valid') {
           setResultState('valid');
           setResultDetails({
             name: data.guestName,
             ticketType: data.ticketType,
             validDays: data.validDays,
+            guestCount: groupDetails.count,
+            groupName: groupDetails.groupName,
+            isGroup: groupDetails.isGroup,
             entryTime: data.entryTime,
             message: data.message
           });
@@ -234,6 +243,9 @@ export default function StaffDashboard() {
           setResultDetails({
             name: data.guestName,
             ticketType: data.ticketType,
+            guestCount: groupDetails.count,
+            groupName: groupDetails.groupName,
+            isGroup: groupDetails.isGroup,
             message: data.message
           });
           playSound('error');
@@ -242,6 +254,9 @@ export default function StaffDashboard() {
           setResultDetails({
             name: data.guestName,
             ticketType: data.ticketType,
+            guestCount: groupDetails.count,
+            groupName: groupDetails.groupName,
+            isGroup: groupDetails.isGroup,
             usedAt: data.usedAt,
             message: data.message
           });
@@ -251,6 +266,9 @@ export default function StaffDashboard() {
           setResultDetails({
             name: data.guestName,
             ticketType: data.ticketType,
+            guestCount: groupDetails.count,
+            groupName: groupDetails.groupName,
+            isGroup: groupDetails.isGroup,
             message: data.message
           });
           playSound('error');
@@ -259,6 +277,8 @@ export default function StaffDashboard() {
           setResultDetails({
             name: 'Invalid Ticket',
             ticketType: 'Unknown',
+            guestCount: 1,
+            isGroup: false,
             message: data.message || 'Signature verification failed'
           });
           playSound('error');
@@ -281,11 +301,25 @@ export default function StaffDashboard() {
         setResultDetails({
           name: 'Unknown Ticket',
           ticketType: 'Unknown',
+          guestCount: 1,
+          isGroup: false,
           message: 'Ticket not found in local offline memory.'
         });
         playSound('error');
         return;
       }
+
+      // Recover guest count and table/group name from offline ticket or JWT payload
+      let jwtPayload: any = null;
+      try {
+        const parts = qrToken.split('.');
+        if (parts.length === 3) {
+          jwtPayload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        }
+      } catch (_) {}
+
+      const cleanType = cleanPassCategory(ticket.ticket_type);
+      const groupDetails = getGroupDetails(cleanType, ticket.guest_count || jwtPayload?.gc, ticket.group_name || jwtPayload?.tb);
 
       const res = await logOfflineCheckin(ticket.id, qrToken, gate, device, activeScanDate);
 
@@ -293,15 +327,24 @@ export default function StaffDashboard() {
         setResultState('valid');
         setResultDetails({
           name: ticket.name,
-          ticketType: cleanPassCategory(ticket.ticket_type),
-          entryTime: new Date().toISOString()
+          ticketType: cleanType,
+          guestCount: groupDetails.count,
+          groupName: groupDetails.groupName,
+          isGroup: groupDetails.isGroup,
+          entryTime: new Date().toISOString(),
+          message: groupDetails.isGroup 
+            ? `Admit exactly ${groupDetails.count} Members. Entry Granted for ${activeScanDate}.` 
+            : undefined
         });
         playSound('success');
       } else if (res.status === 'already_used') {
         setResultState('already_used');
         setResultDetails({
           name: ticket.name,
-          ticketType: cleanPassCategory(ticket.ticket_type),
+          ticketType: cleanType,
+          guestCount: groupDetails.count,
+          groupName: groupDetails.groupName,
+          isGroup: groupDetails.isGroup,
           message: `Already checked in today (${activeScanDate}) at this gate`
         });
         playSound('error');
@@ -309,7 +352,10 @@ export default function StaffDashboard() {
         setResultState('invalid');
         setResultDetails({
           name: ticket.name,
-          ticketType: cleanPassCategory(ticket.ticket_type),
+          ticketType: cleanType,
+          guestCount: groupDetails.count,
+          groupName: groupDetails.groupName,
+          isGroup: groupDetails.isGroup,
           message: `Invalid Pass Date! Pass not valid for ${activeScanDate}.`
         });
         playSound('error');
@@ -317,7 +363,10 @@ export default function StaffDashboard() {
         setResultState('invalid');
         setResultDetails({
           name: ticket.name,
-          ticketType: cleanPassCategory(ticket.ticket_type),
+          ticketType: cleanType,
+          guestCount: groupDetails.count,
+          groupName: groupDetails.groupName,
+          isGroup: groupDetails.isGroup,
           message: 'Offline verification error'
         });
         playSound('error');
@@ -543,18 +592,55 @@ export default function StaffDashboard() {
                   </h2>
                 </div>
 
-                <div className="rounded-3xl bg-black/50 border border-white/10 p-6 backdrop-blur-md text-left">
-                  <div className="text-xs text-white/50 uppercase">PASS HOLDER</div>
-                  <div className="text-xl font-black text-white mt-0.5">{resultDetails.name}</div>
+                <div className="rounded-3xl bg-black/60 border border-white/10 p-6 backdrop-blur-md text-left space-y-4">
+                  <div>
+                    <div className="text-[10px] text-white/50 uppercase tracking-widest font-semibold">PASS HOLDER / LEADER</div>
+                    <div className="text-2xl font-black text-white mt-0.5">{resultDetails.name}</div>
+                  </div>
                   
-                  <div className="mt-3">
+                  {/* PROMINENT MEMBER / HEADCOUNT BANNER */}
+                  <div className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${
+                    (resultDetails.guestCount || 1) > 1
+                      ? 'bg-amber-500/20 border-amber-400/60 shadow-[0_0_20px_rgba(245,158,11,0.3)]'
+                      : 'bg-zinc-900/80 border-zinc-800'
+                  }`}>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Users className={`h-4 w-4 ${(resultDetails.guestCount || 1) > 1 ? 'text-amber-400' : 'text-zinc-400'}`} />
+                        <span className={`text-[11px] font-black uppercase tracking-wider ${(resultDetails.guestCount || 1) > 1 ? 'text-amber-300' : 'text-zinc-400'}`}>
+                          {(resultDetails.guestCount || 1) > 1 ? 'GROUP / TABLE HEADCOUNT' : 'PASS ADMISSION'}
+                        </span>
+                      </div>
+                      <div className="text-xl font-black text-white tracking-wide">
+                        {(resultDetails.guestCount || 1) > 1 
+                          ? `ADMIT EXACTLY ${resultDetails.guestCount} PERSONS` 
+                          : 'ADMIT 1 PERSON ONLY'}
+                      </div>
+                      {resultDetails.groupName && (
+                        <div className="text-xs text-amber-200/90 font-bold">
+                          Group / Table: <span className="text-white underline">{resultDetails.groupName}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right pl-2">
+                      <div className={`text-2xl font-black px-3.5 py-1.5 rounded-xl border whitespace-nowrap ${
+                        (resultDetails.guestCount || 1) > 1
+                          ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)]'
+                          : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                      }`}>
+                        {resultDetails.guestCount || 1} PAX
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
                     <span className="inline-block rounded-full bg-pink-500/20 border border-pink-500/30 px-3 py-1 text-xs font-bold text-pink-300">
                       {cleanPassCategory(resultDetails.ticketType)}
                     </span>
                   </div>
 
                   {resultDetails.message && (
-                    <div className="mt-4 pt-3 border-t border-white/10 text-xs font-bold text-white">
+                    <div className="pt-2 border-t border-white/10 text-xs font-bold text-white/90 leading-relaxed">
                       {resultDetails.message}
                     </div>
                   )}

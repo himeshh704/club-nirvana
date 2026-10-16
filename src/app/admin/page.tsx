@@ -37,7 +37,7 @@ import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { Html5Qrcode } from 'html5-qrcode';
 import { getOfflineTicketByToken, logOfflineCheckin } from '@/lib/indexedDb';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getGroupDetails } from '@/lib/formatters';
 
 interface DashboardStats {
   totalGuests: number;
@@ -151,9 +151,20 @@ export default function AdminPage() {
   // Gate Scanner tab states inside Admin Panel
   const [adminScannerOpen, setAdminScannerOpen] = useState(false);
   const [scanningResult, setScanningResult] = useState<string>('idle'); // idle, valid, already_used, invalid, banned
-  const [scanningDetails, setScanningDetails] = useState({
+  const [scanningDetails, setScanningDetails] = useState<{
+    name: string;
+    ticketType: string;
+    guestCount?: number;
+    groupName?: string;
+    isGroup?: boolean;
+    message: string;
+    usedAt: string;
+  }>({
     name: '',
     ticketType: '',
+    guestCount: 1,
+    groupName: '',
+    isGroup: false,
     message: '',
     usedAt: ''
   });
@@ -326,18 +337,22 @@ export default function AdminPage() {
 
       if (!res.ok) throw new Error('API verify failed');
       const data = await res.json();
+      const groupDetails = getGroupDetails(data.ticketType, data.guestCount, data.groupName);
 
       setScanningResult(data.status);
       setScanningDetails({
         name: data.guestName || 'Unknown Guest',
         ticketType: data.ticketType || 'Regular',
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         message: data.message || '',
         usedAt: data.usedAt || ''
       });
 
       if (data.status === 'valid') {
         playSynthSound(true);
-        if (data.ticketType === 'VIP' || data.ticketType?.includes('Table')) {
+        if (data.ticketType === 'VIP' || data.ticketType?.includes('Table') || data.ticketType?.toLowerCase().includes('group')) {
           confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
         }
       } else {
@@ -352,10 +367,14 @@ export default function AdminPage() {
         const localTicket = await getOfflineTicketByToken(qrToken);
         if (localTicket) {
           await logOfflineCheckin(localTicket.id, qrToken, 'Admin Gate', 'Admin Console');
+          const groupDetails = getGroupDetails(localTicket.ticket_type, localTicket.guest_count, localTicket.group_name);
           setScanningResult('valid');
           setScanningDetails({
             name: localTicket.name || (localTicket as any).users?.name || 'VIP Guest',
             ticketType: localTicket.ticket_type || 'Regular',
+            guestCount: groupDetails.count,
+            groupName: groupDetails.groupName,
+            isGroup: groupDetails.isGroup,
             message: 'Checked in via Offline DB Cache',
             usedAt: new Date().toISOString()
           });
@@ -368,10 +387,14 @@ export default function AdminPage() {
         if (parts.length === 3) {
           const payloadJson = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
           if (payloadJson && payloadJson.i && payloadJson.n) {
+            const groupDetails = getGroupDetails(payloadJson.t, payloadJson.gc, payloadJson.tb);
             setScanningResult('valid');
             setScanningDetails({
               name: payloadJson.n,
               ticketType: payloadJson.t || 'Regular',
+              guestCount: groupDetails.count,
+              groupName: groupDetails.groupName,
+              isGroup: groupDetails.isGroup,
               message: 'Verified via Token Cryptographic Signature',
               usedAt: new Date().toISOString()
             });
@@ -388,6 +411,8 @@ export default function AdminPage() {
       setScanningDetails({
         name: 'Connection / DB Error',
         ticketType: 'Unknown',
+        guestCount: 1,
+        isGroup: false,
         message: 'Database check failed or connection lost.',
         usedAt: ''
       });
@@ -2786,15 +2811,54 @@ export default function AdminPage() {
               </div>
 
               {/* Attendee details */}
-              <div className="rounded-2xl bg-zinc-900/60 border border-zinc-850 p-5 text-left">
-                <span className="text-[9px] text-zinc-500 uppercase tracking-widest block">GUEST RECORD</span>
-                <span className="text-xl font-bold mt-1 block text-white">{scanningDetails.name}</span>
-                
-                <span className={`inline-block mt-3 rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase ${
-                  scanningDetails.ticketType === 'VIP' ? 'bg-[#ffe082]/10 text-[#ffe082] border border-[#ffe082]/20' : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+              <div className="rounded-2xl bg-zinc-900/60 border border-zinc-850 p-5 text-left space-y-3">
+                <div>
+                  <span className="text-[9px] text-zinc-500 uppercase tracking-widest block font-semibold">GUEST RECORD</span>
+                  <span className="text-xl font-bold mt-0.5 block text-white">{scanningDetails.name}</span>
+                </div>
+
+                {/* PROMINENT MEMBER / HEADCOUNT BANNER */}
+                <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                  (scanningDetails.guestCount || 1) > 1
+                    ? 'bg-amber-500/20 border-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                    : 'bg-zinc-800/60 border-zinc-700/60'
                 }`}>
-                  {scanningDetails.ticketType} PASS
-                </span>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Users className={`h-3.5 w-3.5 ${(scanningDetails.guestCount || 1) > 1 ? 'text-amber-400' : 'text-zinc-400'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${(scanningDetails.guestCount || 1) > 1 ? 'text-amber-300' : 'text-zinc-400'}`}>
+                        {(scanningDetails.guestCount || 1) > 1 ? 'GROUP / TABLE HEADCOUNT' : 'PASS ADMISSION'}
+                      </span>
+                    </div>
+                    <div className="text-base font-black text-white">
+                      {(scanningDetails.guestCount || 1) > 1 
+                        ? `ADMIT EXACTLY ${scanningDetails.guestCount} PERSONS` 
+                        : 'ADMIT 1 PERSON ONLY'}
+                    </div>
+                    {scanningDetails.groupName && (
+                      <div className="text-[11px] text-amber-200/90 font-bold">
+                        Group: <span className="text-white underline">{scanningDetails.groupName}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right pl-2">
+                    <div className={`text-xl font-black px-3 py-1 rounded-lg border whitespace-nowrap ${
+                      (scanningDetails.guestCount || 1) > 1
+                        ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                        : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                    }`}>
+                      {scanningDetails.guestCount || 1} PAX
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <span className={`inline-block rounded-full px-3 py-0.5 text-[10px] font-semibold uppercase ${
+                    scanningDetails.ticketType === 'VIP' ? 'bg-[#ffe082]/10 text-[#ffe082] border border-[#ffe082]/20' : 'bg-zinc-800 text-zinc-300 border border-zinc-700'
+                  }`}>
+                    {cleanPassCategory(scanningDetails.ticketType)} PASS
+                  </span>
+                </div>
 
                 <div className="mt-4 border-t border-zinc-800/80 pt-3 text-xs space-y-2 text-zinc-400">
                   {scanningResult === 'valid' && (

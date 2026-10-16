@@ -19,7 +19,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getTicketGuestCount } from '@/lib/formatters';
 
 interface Attendee {
   id: string; // Ticket ID
@@ -29,6 +29,7 @@ interface Attendee {
   ticket_type: string;
   raw_ticket_type?: string;
   valid_days?: 'both' | 'day_1' | 'day_2' | string;
+  guest_count?: number;
   day_1_scanned?: boolean;
   day_2_scanned?: boolean;
   qr_token: string;
@@ -450,7 +451,7 @@ export default function AttendeeDirectory() {
                             {cleanPassCategory(attendee.ticket_type)}
                           </span>
 
-                          <div>
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                               attendee.valid_days === 'day_1'
                                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
@@ -460,6 +461,11 @@ export default function AttendeeDirectory() {
                             }`}>
                               📅 {attendee.valid_days === 'day_1' ? '18 Oct (Day 1)' : attendee.valid_days === 'day_2' ? '19 Oct (Day 2)' : '18 & 19 Oct (Both Days)'}
                             </span>
+                            {getTicketGuestCount(attendee.ticket_type, attendee.guest_count) > 1 && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                                👥 {getTicketGuestCount(attendee.ticket_type, attendee.guest_count)} Guests
+                              </span>
+                            )}
                           </div>
                         </div>
                       </td>

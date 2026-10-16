@@ -27,3 +27,56 @@ export function cleanPassCategory(category?: string | null): string {
     .replace(/\s+-\s*$/, '')
     .trim();
 }
+
+/**
+ * Extracts the exact guest / member headcount from a ticket category or payload count.
+ * Handles groups (e.g. 6 guests, 8 guests), couples (2), or single admissions (1).
+ */
+export function getTicketGuestCount(ticketType?: string | null, payloadCount?: number): number {
+  if (typeof payloadCount === 'number' && payloadCount > 0) {
+    return payloadCount;
+  }
+  if (!ticketType) return 1;
+
+  // 1. Look for explicit count in brackets, parens or format like [Group Name - 6 Guests] or (8 Guests) or - 10 Pax
+  const match = ticketType.match(/(?:\[[^\].]*?-\s*|\(|\b)(\d+)\s*(?:Guests?|Members?|Pax|Persons?)/i);
+  if (match && match[1]) {
+    const parsed = parseInt(match[1], 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  // 2. Look for Couple passes
+  if (ticketType.toLowerCase().includes('couple')) {
+    return 2;
+  }
+
+  // Default single admission
+  return 1;
+}
+
+/**
+ * Returns structured group details including guest count, group/table name, and whether it's a group pass.
+ */
+export function getGroupDetails(ticketType?: string | null, payloadCount?: number, payloadTable?: string): {
+  isGroup: boolean;
+  count: number;
+  groupName?: string;
+  label: string;
+} {
+  const count = getTicketGuestCount(ticketType, payloadCount);
+  const isGroup = count > 1 || (!!ticketType && /group|table|vip lounge/i.test(ticketType));
+
+  let groupName = payloadTable?.trim() || undefined;
+  if (!groupName && ticketType) {
+    const groupMatch = ticketType.match(/\[(.*?)\s*-\s*\d+\s*(?:Guests?|Members?|Pax)/i);
+    if (groupMatch && groupMatch[1]) {
+      groupName = groupMatch[1].trim();
+    }
+  }
+
+  const label = count > 1
+    ? (ticketType?.toLowerCase().includes('couple') ? 'Couple Pass (2 Guests)' : `Group Pass (${count} Members)`)
+    : 'Single Pass (1 Guest)';
+
+  return { isGroup, count, groupName, label };
+}

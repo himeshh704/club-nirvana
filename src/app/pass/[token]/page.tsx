@@ -11,11 +11,12 @@ import {
   Copy, 
   Check,
   CheckCircle2,
-  Lock
+  Lock,
+  Users
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import QRCode from 'qrcode';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getGroupDetails } from '@/lib/formatters';
 
 export default function StandalonePassPage({ params }: { params: Promise<{ token: string }> }) {
   const resolvedParams = use(params);
@@ -46,11 +47,16 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
         const parts = token.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          const cleanType = cleanPassCategory(payload.t) || 'Rangilo Raas Pass';
+          const groupDetails = getGroupDetails(cleanType, payload.gc, payload.tb);
           setTicketData({
             ticketId: payload.i,
             name: payload.n || 'Valued Guest',
-            ticketType: cleanPassCategory(payload.t) || 'Rangilo Raas Pass',
-            validDays: payload.v || 'both'
+            ticketType: cleanType,
+            validDays: payload.v || 'both',
+            guestCount: groupDetails.count,
+            groupName: groupDetails.groupName,
+            isGroup: groupDetails.isGroup
           });
         } else {
           setTokenError(true);
@@ -83,7 +89,10 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
       : ticketData?.validDays === 'day_2'
       ? '19 OCT 2026 (Day 2 Only)'
       : '18 & 19 OCT 2026 (Both Days)';
-    const message = `Hey *${name}*! 💃\n\nHere is your Official Entry Pass for *RANGILO RAAS 2026*!\n\n🎟️ Pass Category: *${type}*\n📅 Dates: *${datesStr}*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nView Pass: ${url}`;
+    const groupStr = (ticketData?.guestCount || 1) > 1
+      ? `\n👥 Group Size: *${ticketData.guestCount} Members*`
+      : '';
+    const message = `Hey *${name}*! 💃\n\nHere is your Official Entry Pass for *RANGILO RAAS 2026*!\n\n🎟️ Pass Category: *${type}*${groupStr}\n📅 Dates: *${datesStr}*\n📍 Venue: *Filos 24/7, Jodhpur*\n\nView Pass: ${url}`;
     
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -146,6 +155,19 @@ export default function StandalonePassPage({ params }: { params: Promise<{ token
             <div>
               <div className="text-[10px] font-extrabold text-red-500 uppercase tracking-wider">PASSHOLDER</div>
               <div className="text-2xl font-black text-white capitalize mt-0.5">{ticketData?.name || 'Valued Guest'}</div>
+              {(ticketData?.guestCount || 1) > 1 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                    <Users className="w-3.5 h-3.5 text-amber-400" />
+                    ADMIT {ticketData.guestCount} {ticketData.guestCount === 1 ? 'PERSON' : 'PERSONS / GUESTS'}
+                  </span>
+                  {ticketData.groupName && (
+                    <span className="text-[10px] font-bold text-zinc-300 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-lg">
+                      Group: {ticketData.groupName}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="text-right">
               <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-red-600/20 text-red-400 border border-red-600/30 uppercase">

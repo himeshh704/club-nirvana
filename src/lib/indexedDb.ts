@@ -7,6 +7,8 @@ export interface OfflineTicket {
   phone: string;
   ticket_type: string;
   valid_days?: 'both' | 'day_1' | 'day_2' | string;
+  guest_count?: number;
+  group_name?: string;
   day_1_scanned?: boolean;
   day_2_scanned?: boolean;
   qr_token: string;

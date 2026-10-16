@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyQRToken } from '@/lib/qrCrypto';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getGroupDetails } from '@/lib/formatters';
 
 export async function POST(request: Request) {
   try {
@@ -32,12 +32,16 @@ export async function POST(request: Request) {
     let ticketId: string | null = null;
     let payloadName: string | null = null;
     let payloadTicketType: string | null = null;
+    let payloadGuestCount: number | undefined = undefined;
+    let payloadTable: string | undefined = undefined;
 
     try {
       payload = verifyQRToken(rawToken);
       ticketId = payload.i;
       payloadName = payload.n;
       payloadTicketType = payload.t;
+      payloadGuestCount = payload.gc;
+      payloadTable = payload.tb;
     } catch (err) {
       console.warn('QR verification signature mismatch, checking DB fallback:', err);
     }
@@ -48,14 +52,14 @@ export async function POST(request: Request) {
       if (ticketId) {
         const res = await supabaseAdmin
           .from('tickets')
-          .select('id, ticket_type, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
+          .select('id, ticket_type, table_number, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
           .eq('id', ticketId)
           .maybeSingle();
         ticket = res.data;
       } else {
         const res = await supabaseAdmin
           .from('tickets')
-          .select('id, ticket_type, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
+          .select('id, ticket_type, table_number, valid_days, is_used, used_at, day_1_scanned, day_1_scanned_at, day_2_scanned, day_2_scanned_at, is_banned, users(name)')
           .or(`id.eq.${rawToken},qr_token.eq.${rawToken}`)
           .maybeSingle();
         ticket = res.data;
@@ -75,6 +79,7 @@ export async function POST(request: Request) {
     const name = payloadName || (ticket as any)?.users?.name || 'Guest';
     const ticketType = cleanPassCategory(ticket?.ticket_type || payloadTicketType || 'Rangilo Raas Pass');
     const validDays = ticket?.valid_days || (payloadTicketType?.toLowerCase().includes('day 1') ? 'day_1' : payloadTicketType?.toLowerCase().includes('day 2') ? 'day_2' : 'both');
+    const groupDetails = getGroupDetails(ticketType, payloadGuestCount, payloadTable || ticket?.table_number);
 
     // 3. Blacklist check
     if (ticket && ticket.is_banned) {
@@ -82,6 +87,9 @@ export async function POST(request: Request) {
         status: 'banned',
         guestName: name,
         ticketType,
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         message: 'Guest has been blacklisted. Entry denied by Security.'
       });
     }
@@ -92,6 +100,9 @@ export async function POST(request: Request) {
         status: 'invalid_date',
         guestName: name,
         ticketType,
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         message: 'Invalid Pass Date! This pass is valid for Day 2 (Oct 19) Only.'
       });
     }
@@ -101,6 +112,9 @@ export async function POST(request: Request) {
         status: 'invalid_date',
         guestName: name,
         ticketType,
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         message: 'Invalid Pass Date! This pass was valid for Day 1 (Oct 18) Only.'
       });
     }
@@ -111,6 +125,9 @@ export async function POST(request: Request) {
         status: 'already_used',
         guestName: name,
         ticketType,
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         usedAt: ticket.day_1_scanned_at,
         message: `Already checked in today (Day 1) at ${new Date(ticket.day_1_scanned_at || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
       });
@@ -121,6 +138,9 @@ export async function POST(request: Request) {
         status: 'already_used',
         guestName: name,
         ticketType,
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         usedAt: ticket.day_2_scanned_at,
         message: `Already checked in today (Day 2) at ${new Date(ticket.day_2_scanned_at || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
       });
@@ -132,6 +152,9 @@ export async function POST(request: Request) {
         status: 'already_used',
         guestName: name,
         ticketType,
+        guestCount: groupDetails.count,
+        groupName: groupDetails.groupName,
+        isGroup: groupDetails.isGroup,
         usedAt: ticket.used_at,
         message: `Ticket already used at ${new Date(ticket.used_at || '').toLocaleTimeString()}`
       });
@@ -175,9 +198,14 @@ export async function POST(request: Request) {
       guestName: name,
       ticketType,
       validDays,
+      guestCount: groupDetails.count,
+      groupName: groupDetails.groupName,
+      isGroup: groupDetails.isGroup,
       scanDate: activeScanDate,
       entryTime: now,
-      message: `Welcome to Rangilo Raas! Entry Granted for ${activeScanDate}.`
+      message: groupDetails.isGroup 
+        ? `Admit exactly ${groupDetails.count} Members. Entry Granted for ${activeScanDate}.`
+        : `Welcome to Rangilo Raas! Entry Granted for ${activeScanDate}.`
     });
 
   } catch (error) {

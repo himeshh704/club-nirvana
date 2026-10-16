@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { signQRToken } from '@/lib/qrCrypto';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getTicketGuestCount } from '@/lib/formatters';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: Request) {
@@ -34,6 +34,9 @@ export async function POST(request: Request) {
       }
     }
 
+    const guestCount = getTicketGuestCount(cleanCategory, body.guest_count || (body.tableGuestCount ? parseInt(String(body.tableGuestCount), 10) : undefined));
+    const tableOrGroup = body.table_number ? String(body.table_number).trim() : undefined;
+
     const ticketId = randomUUID();
 
     // Cryptographically sign the QR token without any price in payload
@@ -41,7 +44,9 @@ export async function POST(request: Request) {
       i: ticketId,
       n: trimmedName,
       t: cleanCategory,
-      v: valid_days
+      v: valid_days,
+      tb: tableOrGroup,
+      gc: guestCount
     });
 
     try {
@@ -109,6 +114,8 @@ export async function POST(request: Request) {
       ticketId,
       ticketType: cleanCategory,
       validDays: valid_days,
+      guestCount,
+      groupName: tableOrGroup,
       qrToken,
       guestName: trimmedName
     });

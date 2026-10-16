@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { cleanPassCategory } from '@/lib/formatters';
+import { cleanPassCategory, getTicketGuestCount } from '@/lib/formatters';
 
 export async function GET() {
   try {
@@ -34,8 +34,10 @@ export async function GET() {
 
     // Map to a clean flat structure for client IndexedDB consumption
     const flatTickets = (ticketsData || []).map((t: any) => {
-      // Decode JWT token payload safely to recover the attendee's real individual name
+      // Decode JWT token payload safely to recover the attendee's real individual name and guest count
       let attendeeName = t.users?.name || 'Unknown';
+      let payloadGuestCount: number | undefined = undefined;
+      let payloadTable: string | undefined = undefined;
       try {
         if (t.qr_token) {
           const parts = t.qr_token.split('.');
@@ -44,18 +46,25 @@ export async function GET() {
             if (payload && payload.n && typeof payload.n === 'string' && payload.n.trim()) {
               attendeeName = payload.n.trim();
             }
+            if (payload && payload.gc) payloadGuestCount = payload.gc;
+            if (payload && payload.tb) payloadTable = payload.tb;
           }
         }
       } catch (_) {}
+
+      const cleanType = cleanPassCategory(t.ticket_type);
+      const guestCount = getTicketGuestCount(t.ticket_type, payloadGuestCount);
 
       return {
         id: t.id,
         user_id: t.user_id,
         name: attendeeName,
         phone: t.users?.phone || '',
-        ticket_type: cleanPassCategory(t.ticket_type),
+        ticket_type: cleanType,
         raw_ticket_type: t.ticket_type,
         valid_days: t.valid_days || 'both',
+        guest_count: guestCount,
+        group_name: payloadTable,
         qr_token: t.qr_token,
         is_used: t.is_used,
         used_at: t.used_at,
