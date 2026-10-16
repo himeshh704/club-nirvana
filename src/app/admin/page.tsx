@@ -119,6 +119,7 @@ export default function AdminPage() {
     ticketId: string;
     ticketType: string;
     validDays?: 'both' | 'day_1' | 'day_2';
+    guestCount?: number;
     qrToken: string;
     guestName: string;
     guestPhone: string;
@@ -684,10 +685,12 @@ export default function AdminPage() {
       return;
     }
 
-    const cleanTier = cleanPassCategory(tableTier);
+    // Strip any generic (4-6 Guests) range from the selected tier name so it doesn't contradict tableGuestCount
+    const cleanTier = cleanPassCategory(tableTier).replace(/\s*\(\s*\d+\s*-\s*\d+\s*Guests?\s*\)/gi, '').trim();
     const datePrefix = tableValidDays === 'day_1' ? 'Day 1' : tableValidDays === 'day_2' ? 'Day 2' : '2-Day';
     const groupIdentifier = tableNumber.trim() || 'Group Reservation';
-    const fullTableType = `${datePrefix} - ${cleanTier} [${groupIdentifier} - ${tableGuestCount} Guests]`;
+    const parsedGuestCount = parseInt(String(tableGuestCount), 10) || 1;
+    const fullTableType = `${datePrefix} - ${cleanTier} [${groupIdentifier} - ${parsedGuestCount} Guests]`;
     const effectiveTablePrice = paymentStatus === 'Complimentary' ? '0' : (tablePrice.trim() || '0');
     const formattedPaymentMethod = paymentStatus === 'Complimentary' 
       ? 'Complimentary' 
@@ -711,6 +714,8 @@ export default function AdminPage() {
           ticket_type: fullTableType,
           table_number: groupIdentifier,
           valid_days: tableValidDays,
+          guest_count: parsedGuestCount,
+          tableGuestCount: parsedGuestCount,
           payment_method: formattedPaymentMethod,
           price: effectiveTablePrice,
           collected_by: (loggedUser === 'Ankur Bishnoi' || loggedUser === 'Angad Bishnoi') ? loggedUser : collectedBy
@@ -731,6 +736,7 @@ export default function AdminPage() {
           ticketId: data.ticketId,
           ticketType: cleanPassCategory(fullTableType),
           validDays: tableValidDays,
+          guestCount: parsedGuestCount,
           qrToken: data.qrToken,
           guestName: name,
           guestPhone: phone,

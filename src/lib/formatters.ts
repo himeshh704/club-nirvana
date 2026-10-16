@@ -38,14 +38,21 @@ export function getTicketGuestCount(ticketType?: string | null, payloadCount?: n
   }
   if (!ticketType) return 1;
 
-  // 1. Look for explicit count in brackets, parens or format like [Group Name - 6 Guests] or (8 Guests) or - 10 Pax
+  // 1. TOP PRIORITY: Look for explicit customized group reservation in brackets: [Group / Table - 10 Guests]
+  const bracketMatch = ticketType.match(/\[[^\]]*?-\s*(\d+)\s*(?:Guests?|Members?|Pax|Persons?)[^\]]*?\]/i);
+  if (bracketMatch && bracketMatch[1]) {
+    const parsed = parseInt(bracketMatch[1], 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  // 2. Look for explicit count in parens or format like (10 Guests) or - 10 Pax
   const match = ticketType.match(/(?:\[[^\].]*?-\s*|\(|\b)(\d+)\s*(?:Guests?|Members?|Pax|Persons?)/i);
   if (match && match[1]) {
     const parsed = parseInt(match[1], 10);
     if (!isNaN(parsed) && parsed > 0) return parsed;
   }
 
-  // 2. Look for Couple passes
+  // 3. Look for Couple passes
   if (ticketType.toLowerCase().includes('couple')) {
     return 2;
   }
